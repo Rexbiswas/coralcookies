@@ -1,0 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,100..900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Outfit', sans-serif;
+  --font-serif: 'Fraunces', serif;
+
+  --color-chocolate: #2B1B17;
+  --color-chocolate-light: #4A3728;
+  --color-caramel: #D48C45;
+  --color-cookie: #E6C8A6;
+  --color-cream: #F5E6D3;
+  --color-accent: #FF7F50;
+
+  --animate-float: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-chocolate);
+  color: var(--color-cream);
+  overflow-x: hidden;
+}
+
+::selection {
+  background-color: var(--color-caramel);
+  color: var(--color-chocolate);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-chocolate);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-caramel);
+  border-radius: 5px;
+  border: 2px solid var(--color-chocolate);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-cookie);
+}
+
+/* Firefox support */
+@supports (scrollbar-color: auto) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-caramel) var(--color-chocolate);
+  }
+}
