@@ -28,19 +28,21 @@ const CustomCursor = () => {
     return (
         <>
             <style>{`
-        body { cursor: none; }
-        a, button, input { cursor: none; }
+        @media (min-width: 768px) {
+            body { cursor: none; }
+            a, button, input { cursor: none; }
+        }
       `}</style>
 
             {/* Main Cursor (Dot) */}
             <motion.div
-                className="fixed top-0 left-0 w-5 h-5 bg-caramel rounded-full pointer-events-none z-[9999] mix-blend-exclusion"
+                className="fixed top-0 left-0 w-5 h-5 bg-caramel rounded-full pointer-events-none z-[9999] mix-blend-exclusion hidden md:block"
                 style={{ x: cursorX, y: cursorY }}
             />
 
             {/* Trailing Ring */}
             <motion.div
-                className="fixed top-0 left-0 w-10 h-10 border border-white/50 rounded-full pointer-events-none z-[9998] mix-blend-difference"
+                className="fixed top-0 left-0 w-10 h-10 border border-white/50 rounded-full pointer-events-none z-[9998] mix-blend-difference hidden md:block"
                 style={{ x: springX, y: springY, translateX: "-25%", translateY: "-25%" }}
                 animate={{
                     scale: isHovering ? 2.5 : 1,
