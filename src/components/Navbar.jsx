@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
-import { Menu, X, ShoppingBag, Search, Sparkles } from "lucide-react";
+import { Menu, X, ShoppingBag, Search, Sparkles, Plus, Minus, Trash2, ChevronRight } from "lucide-react";
 import { cn } from "../lib/utils";
-
 import { usePageTransition } from "../context/TransitionContext";
+import { useCart } from "../context/CartContext";
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
-    const [isCartOpen, setIsCartOpen] = useState(false);
+    const { cart, removeFromCart, updateQuantity, cartCount, cartTotal, isCartOpen, setIsCartOpen } = useCart();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isSearchHovered, setIsSearchHovered] = useState(false);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -39,7 +39,7 @@ const Navbar = () => {
 
     return (
         <>
-            <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
+            <div className="fixed top-0 left-0 right-0 z-150 flex justify-center pointer-events-none">
                 <motion.nav
                     style={{
                         width: navWidth,
@@ -72,9 +72,6 @@ const Navbar = () => {
                                 href={link.path}
                                 onClick={(e) => handleNavigation(e, link.path)}
                                 className="relative px-5 py-2 rounded-full text-sm font-medium transition-colors"
-                                onMouseEnter={(e) => {
-                                    // Optional: Add hover sound or slight vibration logic here
-                                }}
                             >
                                 <div className="relative z-10 flex items-center gap-2">
                                     <span className={cn(
@@ -135,9 +132,11 @@ const Navbar = () => {
                             className="relative w-12 h-12 rounded-full bg-gradient-to-b from-caramel to-chocolate-light flex items-center justify-center text-white shadow-lg shadow-caramel/20"
                         >
                             <ShoppingBag size={20} />
-                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-cream text-chocolate text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-chocolate">
-                                0
-                            </span>
+                            {cartCount > 0 && (
+                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-cream text-chocolate text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-chocolate">
+                                    {cartCount}
+                                </span>
+                            )}
                         </motion.button>
                     </div>
 
@@ -156,220 +155,128 @@ const Navbar = () => {
             <AnimatePresence>
                 {isOpen && (
                     <>
-                        {/* Backdrop Blur Layer */}
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.5 }}
-                            className="fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm md:hidden"
+                            className="fixed inset-0 z-1200 bg-black/60 backdrop-blur-sm md:hidden"
                         />
-
-                        {/* Liquid Background Blob layer */}
-                        <div className="fixed inset-0 z-[60] pointer-events-none md:hidden overflow-hidden">
-                            {/* The blob originates from the button position (approx top-8 right-8) */}
+                        <div className="fixed inset-0 z-1201 pointer-events-none md:hidden overflow-hidden">
                             <motion.div
-                                initial={{
-                                    top: "2rem",
-                                    right: "2rem",
-                                    width: "40px",
-                                    height: "40px",
-                                    borderRadius: "50%",
-                                    scale: 1
-                                }}
-                                animate={{
-                                    scale: 80,
-                                    borderRadius: ["50%", "40% 60% 70% 30% / 40% 50% 60% 50%", "50%"],
-                                }}
-                                exit={{
-                                    scale: 0,
-                                    borderRadius: "50%",
-                                    transition: { duration: 0.6, ease: "backIn" }
-                                }}
-                                transition={{
-                                    scale: { duration: 0.8, ease: [0.32, 0, 0.67, 0] },
-                                    borderRadius: { duration: 0.8, ease: "linear" }
-                                }}
+                                initial={{ top: "2rem", right: "2rem", width: "40px", height: "40px", borderRadius: "50%", scale: 1 }}
+                                animate={{ scale: 80, borderRadius: ["50%", "40% 60% 70% 30% / 40% 50% 60% 50%", "50%"] }}
+                                exit={{ scale: 0, borderRadius: "50%", transition: { duration: 0.6, ease: "backIn" } }}
+                                transition={{ scale: { duration: 0.8, ease: [0.32, 0, 0.67, 0] }, borderRadius: { duration: 0.8, ease: "linear" } }}
                                 className="absolute bg-[#1a110e]"
                             />
                         </div>
-
-                        {/* Main Menu Content Container */}
-                        <motion.div
-                            className="fixed inset-0 z-[60] flex flex-col justify-center items-center overflow-hidden"
-                        >
-                            {/* Animated Grain Background (Fade in) */}
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 0.15 }}
-                                exit={{ opacity: 0 }}
-                                className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay pointer-events-none"
-                            />
-
-                            {/* Decorative Floating Blobs (Fade in) */}
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1, rotate: 360 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ opacity: { delay: 0.4 }, rotate: { duration: 50, repeat: Infinity, ease: "linear" } }}
-                                className="absolute -top-[20%] -right-[20%] w-[80vw] h-[80vw] bg-caramel/5 rounded-full blur-[100px]"
-                            />
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1, rotate: -360 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ opacity: { delay: 0.4 }, rotate: { duration: 40, repeat: Infinity, ease: "linear" } }}
-                                className="absolute -bottom-[20%] -left-[20%] w-[60vw] h-[60vw] bg-chocolate/20 rounded-full blur-[80px]"
-                            />
-
-                            {/* Close Button */}
+                        <motion.div className="fixed inset-0 z-1202 flex flex-col justify-center items-center">
                             <motion.button
                                 initial={{ opacity: 0, rotate: -90, scale: 0 }}
                                 animate={{ opacity: 1, rotate: 0, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0 }}
-                                transition={{ delay: 0.5, type: "spring" }}
                                 onClick={() => setIsOpen(false)}
-                                className="absolute top-8 right-8 p-4 text-cookie hover:text-white transition-colors bg-white/5 rounded-full hover:bg-caramel hover:text-chocolate z-50"
+                                className="absolute top-8 right-8 p-4 text-white/50 hover:text-white transition-colors bg-white/5 rounded-full hover:bg-caramel hover:text-chocolate z-50 cursor-pointer pointer-events-auto"
                             >
                                 <X size={32} />
                             </motion.button>
-
-                            {/* Menu Container */}
-                            <div className="flex flex-col gap-8 text-center relative z-10 w-full px-12 perspective-1000">
-                                <motion.span
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 0.6, y: 0 }}
-                                    transition={{ delay: 0.4 }}
-                                    className="text-caramel text-xs tracking-[0.5em] uppercase mb-4"
-                                >
-                                </motion.span>
-
+                            <div className="flex flex-col gap-8 text-center relative z-10 w-full px-12">
                                 {navLinks.map((link, index) => (
                                     <motion.div
                                         key={link.name}
-                                        initial={{ opacity: 0, y: 100, rotateX: -45 }}
-                                        animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                                        exit={{ opacity: 0, y: -50, transition: { duration: 0.3 } }}
-                                        transition={{
-                                            delay: 0.3 + index * 0.1,
-                                            duration: 0.8,
-                                            type: "spring",
-                                            damping: 20
-                                        }}
-                                        className="origin-bottom"
+                                        initial={{ opacity: 0, y: 50 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -50 }}
+                                        transition={{ delay: 0.1 * index }}
                                     >
-                                        <a
-                                            href={link.path}
-                                            onClick={(e) => handleNavigation(e, link.path)}
-                                            className="group relative inline-block"
-                                        >
-                                            <span className={cn(
-                                                "text-6xl font-serif font-light tracking-tight transition-all duration-500 block relative z-10",
-                                                location.pathname === link.path
-                                                    ? "text-transparent bg-clip-text bg-gradient-to-r from-caramel to-cookie scale-110"
-                                                    : "text-white/40 hover:text-white"
-                                            )}>
-                                                {link.name}
-                                            </span>
-
-                                            {/* Hover Glow */}
-                                            <span className="absolute inset-0 bg-caramel/20 blur-[20px] scale-0 group-hover:scale-150 transition-transform duration-500 rounded-full -z-10" />
+                                        <a href={link.path} onClick={(e) => handleNavigation(e, link.path)} className="text-5xl font-serif text-white/40 hover:text-white transition-colors">
+                                            {link.name}
                                         </a>
                                     </motion.div>
                                 ))}
+                                <div className="mt-12 flex justify-center gap-8">
+                                    <button onClick={() => { setIsOpen(false); setIsSearchOpen(true); }} className="text-white/40 hover:text-caramel transition-colors"><Search size={32} /></button>
+                                    <button onClick={() => { setIsOpen(false); setIsCartOpen(true); }} className="relative text-white/40 hover:text-caramel transition-colors">
+                                        <ShoppingBag size={32} />
+                                        {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-caramel text-chocolate text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">{cartCount}</span>}
+                                    </button>
+                                </div>
                             </div>
-
-                            {/* Bottom Actions */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 50 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ delay: 0.6 }}
-                                className="mt-20 flex gap-8 relative z-10"
-                            >
-                                <div className="flex flex-col items-center gap-3 group cursor-pointer" onClick={() => { setIsOpen(false); setIsSearchOpen(true); }}>
-                                    <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-cream group-hover:bg-caramel group-hover:text-chocolate group-hover:scale-110 transition-all duration-300 shadow-lg">
-                                        <Search size={24} />
-                                    </div>
-                                    <span className="text-[10px] text-white/30 uppercase tracking-widest group-hover:text-caramel transition-colors">Search</span>
-                                </div>
-                                <div className="flex flex-col items-center gap-3 group cursor-pointer" onClick={() => { setIsOpen(false); setIsCartOpen(true); }}>
-                                    <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-cream group-hover:bg-caramel group-hover:text-chocolate group-hover:scale-110 transition-all duration-300 shadow-lg relative">
-                                        <ShoppingBag size={24} />
-                                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-caramel text-chocolate text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#1a110e]">0</span>
-                                    </div>
-                                    <span className="text-[10px] text-white/30 uppercase tracking-widest group-hover:text-caramel transition-colors">Cart</span>
-                                </div>
-                            </motion.div>
                         </motion.div>
                     </>
                 )}
             </AnimatePresence>
 
-            {/* Cart Drawer */}
+            {/* Cart Drawer Overlay */}
             <AnimatePresence>
                 {isCartOpen && (
-                    <>
-                        {/* Cart Backdrop */}
+                    <div className="fixed inset-0 z-1000 pointer-events-none">
                         <motion.div
+                            key="cart-backdrop"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsCartOpen(false)}
-                            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm"
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm shadow-[0_0_100px_rgba(0,0,0,0.5)] pointer-events-auto"
                         />
-
-                        {/* Cart Panel */}
                         <motion.div
+                            key="cart-panel"
                             initial={{ x: "100%" }}
                             animate={{ x: 0 }}
                             exit={{ x: "100%" }}
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="fixed top-0 right-0 h-full w-full md:w-[450px] bg-[#1a110e] border-l border-white/10 z-[70] shadow-2xl flex flex-col"
+                            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                            className="fixed top-0 right-0 h-full w-full md:w-[450px] bg-[#1a110e] border-l border-white/10 shadow-2xl flex flex-col pointer-events-auto z-1001"
                         >
-                            {/* Texture Overlay */}
-                            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay pointer-events-none" />
-
-                            {/* Cart Header */}
-                            <div className="relative z-10 p-8 border-b border-white/5 flex items-center justify-between">
+                            <div className="p-8 border-b border-white/5 flex items-center justify-between">
                                 <h2 className="text-3xl font-serif text-cream">Your Bag</h2>
-                                <button
-                                    onClick={() => setIsCartOpen(false)}
-                                    className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-caramel hover:text-chocolate transition-all"
-                                >
+                                <button onClick={() => setIsCartOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-caramel hover:text-chocolate transition-all">
                                     <X size={20} />
                                 </button>
                             </div>
 
-                            {/* Cart Content (Empty State) */}
-                            <div className="flex-1 relative z-10 flex flex-col items-center justify-center p-8 text-center">
-                                <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-6 animate-pulse">
-                                    <ShoppingBag size={40} className="text-white/20" />
-                                </div>
-                                <h3 className="text-xl text-white/80 font-medium mb-2">No cookies yet?</h3>
-                                <p className="text-white/40 mb-8 max-w-[200px]">Your jar is looking a little light. Let's fix that.</p>
-
-                                <a
-                                    href="/shop"
-                                    onClick={(e) => { handleNavigation(e, "/shop"); setIsCartOpen(false); }}
-                                    className="px-8 py-3 bg-caramel text-chocolate rounded-full font-bold hover:bg-[#d48c45] transition-colors"
-                                >
-                                    Start Filling
-                                </a>
+                            <div className="flex-1 overflow-y-auto p-6 no-scrollbar">
+                                {cart.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
+                                        <ShoppingBag size={64} className="mb-4" />
+                                        <p className="text-xl">Your bag is empty</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        {cart.map((item) => (
+                                            <motion.div key={item.id} layout className="flex gap-4 p-4 rounded-3xl bg-white/5 border border-white/5 transition-all">
+                                                <div className="w-20 h-20 bg-chocolate rounded-2xl flex items-center justify-center p-2"><img src={item.image} alt="" className="w-full h-full object-contain" /></div>
+                                                <div className="flex-1 flex flex-col justify-between">
+                                                    <div className="flex justify-between items-start">
+                                                        <div><h4 className="text-cream font-medium">{item.name}</h4><p className="text-white/30 text-xs">{item.category}</p></div>
+                                                        <button onClick={() => removeFromCart(item.id)} className="text-white/20 hover:text-red-400 transition-colors"><Trash2 size={16} /></button>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <div className="flex items-center gap-3 bg-black/20 rounded-full px-3 py-1 border border-white/5">
+                                                            <button onClick={() => updateQuantity(item.id, -1)} className="text-white/40 hover:text-caramel transition-colors"><Minus size={14} /></button>
+                                                            <span className="text-sm font-bold text-cream min-w-[12px] text-center">{item.quantity}</span>
+                                                            <button onClick={() => updateQuantity(item.id, 1)} className="text-white/40 hover:text-caramel transition-colors"><Plus size={14} /></button>
+                                                        </div>
+                                                        <span className="text-caramel font-serif font-bold">${(item.price * item.quantity).toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Cart Footer */}
-                            <div className="p-8 border-t border-white/5 bg-black/20 relative z-10">
-                                <div className="flex justify-between items-center mb-4 text-white/50">
-                                    <span>Subtotal</span>
-                                    <span>$0.00</span>
+                            <div className="p-8 border-t border-white/5 bg-black/40 backdrop-blur-md">
+                                <div className="flex justify-between items-center mb-6">
+                                    <span className="text-cream font-medium opacity-50">Total</span>
+                                    <span className="text-3xl font-serif text-caramel font-bold">${cartTotal.toFixed(2)}</span>
                                 </div>
-                                <button disabled className="w-full py-4 bg-white/10 text-white/30 rounded-full font-bold cursor-not-allowed">
-                                    Checkout
+                                <button disabled={cart.length === 0} className="w-full py-5 rounded-full font-bold text-lg bg-caramel text-chocolate hover:bg-white transition-all disabled:opacity-20 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                                    Checkout <ChevronRight size={20} />
                                 </button>
                             </div>
                         </motion.div>
-                    </>
+                    </div>
                 )}
             </AnimatePresence>
 
@@ -380,43 +287,11 @@ const Navbar = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.4 }}
-                        className="fixed inset-0 z-[80] bg-[#1a110e]/95 backdrop-blur-xl flex flex-col items-center justify-center"
+                        className="fixed inset-0 z-1100 bg-[#1a110e]/95 backdrop-blur-xl flex flex-col items-center justify-center p-6"
                     >
-                        {/* Close Button */}
-                        <motion.button
-                            initial={{ scale: 0, rotate: -90 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            exit={{ scale: 0 }}
-                            onClick={() => { setIsSearchOpen(false); setIsOpen(true); }}
-                            className="absolute top-8 right-8 w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-caramel hover:text-chocolate transition-colors"
-                        >
-                            <X size={24} />
-                        </motion.button>
-
-                        <div className="w-full max-w-3xl px-6">
-                            <motion.div
-                                initial={{ y: 20, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                transition={{ delay: 0.2 }}
-                                className="relative group"
-                            >
-                                <Search className="absolute left-0 top-1/2 -translate-y-1/2 text-white/20 w-8 h-8 md:w-12 md:h-12 group-focus-within:text-caramel transition-colors duration-300" />
-                                <input
-                                    type="text"
-                                    placeholder="Type to search..."
-                                    autoFocus
-                                    className="w-full bg-transparent border-b-2 border-white/10 py-6 pl-12 md:pl-20 text-3xl md:text-6xl font-serif text-cream placeholder-white/10 focus:outline-none focus:border-caramel transition-colors duration-300"
-                                />
-                            </motion.div>
-                            <motion.p
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.4 }}
-                                className="mt-6 text-white/30 text-sm md:text-base text-center md:text-left pl-0 md:pl-20"
-                            >
-                                Press <span className="text-caramel">Enter</span> to find your flavor.
-                            </motion.p>
+                        <button onClick={() => setIsSearchOpen(false)} className="absolute top-8 right-8 w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-caramel hover:text-chocolate transition-colors"><X size={24} /></button>
+                        <div className="w-full max-w-3xl">
+                            <input type="text" placeholder="Search flavors..." autoFocus className="w-full bg-transparent border-b-2 border-white/10 py-6 text-4xl md:text-7xl font-serif text-cream placeholder-white/5 focus:outline-none focus:border-caramel transition-colors" />
                         </div>
                     </motion.div>
                 )}

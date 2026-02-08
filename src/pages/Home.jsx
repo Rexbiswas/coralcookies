@@ -1,41 +1,10 @@
 import React, { useRef } from 'react';
-import { motion, useScroll, useTransform, useSpring, useMotionValue, useMotionTemplate } from 'framer-motion';
+import { motion, useScroll, useTransform, useMotionValue, useMotionTemplate } from 'framer-motion';
 import CookieJar from '../components/CookieJar';
 import Footer from '../components/Footer';
 
-const MagneticButton = ({ children, className, onClick }) => {
-    const ref = useRef(null);
-    const x = useMotionValue(0);
-    const y = useMotionValue(0);
+import MagneticButton from '../components/MagneticButton';
 
-    const handleMouseMove = (e) => {
-        const { clientX, clientY } = e;
-        const { left, top, width, height } = ref.current.getBoundingClientRect();
-        const centerX = left + width / 2;
-        const centerY = top + height / 2;
-        x.set((clientX - centerX) * 0.3);
-        y.set((clientY - centerY) * 0.3);
-    };
-
-    const handleMouseLeave = () => {
-        x.set(0);
-        y.set(0);
-    };
-
-    return (
-        <motion.button
-            ref={ref}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-            style={{ x, y }}
-            transition={{ type: "spring", stiffness: 150, damping: 15, mass: 0.1 }}
-            className={className}
-            onClick={onClick}
-        >
-            {children}
-        </motion.button>
-    );
-};
 
 const Home = () => {
     const containerRef = useRef(null);
@@ -86,7 +55,7 @@ const Home = () => {
                     </motion.div>
 
                     {/* Main Title - Split Character Reveal */}
-                    <h1 className="text-[15vw] md:text-[11rem] leading-[0.85] font-serif font-medium tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-cream via-[#e8dcc6] to-[#cba379] relative">
+                    <h1 className="text-[15vw] md:text-[11rem] leading-[0.85] font-serif font-medium tracking-tighter text-transparent bg-clip-text bg-linear-to-b from-cream via-[#e8dcc6] to-[#cba379] relative">
                         <div className="overflow-hidden inline-flex">
                             {"Coral".split("").map((char, i) => (
                                 <motion.span
@@ -150,7 +119,7 @@ const Home = () => {
             </section>
 
             {/* Scrolling Marquee Section */}
-            <div className="relative py-12 bg-caramel text-[#2b1b17] overflow-hidden rotate-[-2deg] scale-105 z-20 border-y-4 border-[#2b1b17]">
+            <div className="relative py-12 bg-caramel text-[#2b1b17] overflow-hidden -rotate-2 scale-105 z-20 border-y-4 border-[#2b1b17]">
                 <div className="flex whitespace-nowrap overflow-hidden">
                     <motion.div
                         animate={{ x: "-50%" }}
@@ -204,7 +173,7 @@ const Home = () => {
                             whileInView={{ y: 0, opacity: 1 }}
                             viewport={{ once: true }}
                             transition={{ duration: 0.8, delay: 0.1 }}
-                            className="block text-transparent bg-clip-text bg-gradient-to-r from-caramel via-[#f3dba8] to-caramel italic"
+                            className="block text-transparent bg-clip-text bg-linear-to-r from-caramel via-[#f3dba8] to-caramel italic"
                         >
                             Crumb.
                         </motion.span>
@@ -225,16 +194,16 @@ const Home = () => {
                     {/* Card 1: Large Span */}
                     <motion.div
                         whileHover={{ y: -5 }}
-                        className="md:col-span-2 row-span-1 bg-black rounded-[2rem] relative overflow-hidden group isolate"
+                        className="md:col-span-2 row-span-1 bg-black rounded-4xl relative overflow-hidden group isolate"
                     >
                         {/* Image with tint and scale effect */}
                         <div className="absolute inset-0 z-0 h-full w-full">
                             <motion.img
-                                src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQPPvfL5pntfhz68eJaGlsyLW187ki2oUFvWg&s"
+                                src="https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?q=80&w=1000&auto=format&fit=crop"
                                 className="w-full h-full object-cover opacity-80 group-hover:scale-110 group-hover:rotate-1 transition-transform duration-700 ease-out"
                             />
                             {/* Gradient Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#2b1b17] via-[#2b1b17]/40 to-transparent opacity-90" />
+                            <div className="absolute inset-0 bg-linear-to-t from-[#2b1b17] via-[#2b1b17]/40 to-transparent opacity-90" />
                         </div>
 
                         {/* Content Container */}
@@ -273,7 +242,7 @@ const Home = () => {
                     {/* Card 2: Small */}
                     <motion.div
                         whileHover={{ y: -10 }}
-                        className="bg-caramel text-[#2b1b17] rounded-[2rem] p-8 flex flex-col justify-between relative overflow-hidden group"
+                        className="bg-caramel text-[#2b1b17] rounded-4xl p-8 flex flex-col justify-between relative overflow-hidden group"
                     >
                         <h3 className="text-8xl font-serif font-bold opacity-20 absolute -right-4 -bottom-4 rotate-[-15deg]">100%</h3>
                         <div className="relative z-10 block">
@@ -288,7 +257,7 @@ const Home = () => {
                     {/* Card 3: Tall */}
                     <motion.div
                         whileHover={{ y: -10 }}
-                        className="row-span-2 bg-[#3e2723] border border-white/5 rounded-[2rem] p-10 relative overflow-hidden group"
+                        className="row-span-2 bg-[#3e2723] border border-white/5 rounded-4xl p-10 relative overflow-hidden group"
                     >
                         <div className="absolute top-0 right-0 w-64 h-64 bg-caramel/20 rounded-full blur-[80px] group-hover:bg-caramel/30 transition-colors" />
                         <h3 className="text-4xl font-serif text-cream mb-6 leading-tight">Zero<br />Preservatives.<br />Zero<br />Regrets.</h3>
@@ -305,16 +274,18 @@ const Home = () => {
                     {/* Card 4: Medium */}
                     <motion.div
                         whileHover={{ y: -10 }}
-                        className="md:col-span-2 bg-gradient-to-r from-cream to-[#e8dcc6] rounded-[2rem] p-10 flex items-center justify-between relative overflow-hidden group"
+                        className="md:col-span-2 bg-linear-to-r from-cream to-[#e8dcc6] rounded-4xl p-10 flex items-center justify-between relative overflow-hidden group"
                     >
                         <div className="relative z-10 w-1/2">
                             <h3 className="text-3xl font-serif text-[#2b1b17] mb-2">Madagascan Vanilla</h3>
                             <p className="text-[#2b1b17]/70 font-medium">Hand-pollinated pods for that distinct floral aroma.</p>
                         </div>
-                        <motion.div
-                            className="absolute right-0 top-0 h-full w-1/2 bg-[url('https://images.unsplash.com/photo-1600093463592-8e36ae95ef56?q=80&w=2670&auto=format&fit=crop')] bg-cover bg-center grayscale group-hover:grayscale-0 transition-all duration-500"
-                            style={{ maskImage: 'linear-gradient(to right, transparent, black)' }}
-                        />
+                        <div className="absolute right-0 top-0 h-full w-1/2 overflow-hidden pointer-events-none" style={{ maskImage: 'linear-gradient(to right, transparent, black)' }}>
+                            <motion.img
+                                src="https://images.unsplash.com/photo-1600093463592-8e36ae95ef56?q=80&w=1000&auto=format&fit=crop"
+                                className="h-full w-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                            />
+                        </div>
                     </motion.div>
                 </div>
             </section>
@@ -335,7 +306,7 @@ const Home = () => {
                             transition={{ delay: i * 0.1 }}
                             className="text-center flex-1 min-w-[200px]"
                         >
-                            <h4 className="text-5xl md:text-7xl font-serif text-transparent bg-clip-text bg-gradient-to-b from-caramel to-chocolate font-bold mb-2">{stat.num}</h4>
+                            <h4 className="text-5xl md:text-7xl font-serif text-transparent bg-clip-text bg-linear-to-b from-caramel to-chocolate font-bold mb-2">{stat.num}</h4>
                             <p className="text-white/50 uppercase tracking-widest text-sm">{stat.label}</p>
                         </motion.div>
                     ))}

@@ -91,7 +91,7 @@ export const TransitionProvider = ({ children }) => {
             {/* THE COOKIE GRID OVERLAY */}
             <div
                 ref={overlayRef}
-                className="fixed inset-0 z-[100] pointer-events-none hidden"
+                className="fixed inset-0 z-100 pointer-events-none"
                 style={{
                     display: 'none', // Initially hidden, toggled by GSAP
                     gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
@@ -116,7 +116,7 @@ export const TransitionProvider = ({ children }) => {
                 ))}
 
                 {/* Brand loader centered on top of grid */}
-                <div className="fixed inset-0 flex items-center justify-center z-[101] pointer-events-none">
+                <div className="fixed inset-0 flex items-center justify-center z-101 pointer-events-none">
                     <h2 className={`text-caramel font-serif text-5xl transition-opacity duration-300 ${isAnimating ? "opacity-100" : "opacity-0"}`}>
                         CoralCookies
                     </h2>

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import Lenis from 'lenis';
@@ -9,33 +9,42 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 
 import { TransitionProvider } from './context/TransitionContext';
+import { CartProvider } from './context/CartContext';
+import CustomCursor from './components/CustomCursor';
+
 
 function AnimatedRoutes() {
   const location = useLocation();
 
   return (
-    <Routes location={location} key={location.pathname}>
-      <Route path="/" element={<Home />} />
-      <Route path="/shop" element={<Shop />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/contact" element={<Contact />} />
-    </Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<Home />} />
+        <Route path="/shop" element={<Shop />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+      </Routes>
+    </AnimatePresence>
   );
 }
 
-import CustomCursor from './components/CustomCursor';
-
 function AppContent() {
+  const appContainerRef = useRef(null);
+
   return (
-    <TransitionProvider>
-      <CustomCursor />
-      <div className="min-h-screen bg-chocolate text-cream font-sans selection:bg-caramel selection:text-chocolate">
-        <Navbar />
-        <main>
-          <AnimatedRoutes />
-        </main>
-      </div>
-    </TransitionProvider>
+    <CartProvider>
+      <TransitionProvider>
+        <div ref={appContainerRef} className="app-container relative min-h-screen w-full">
+          <CustomCursor />
+          <div className="min-h-screen bg-chocolate text-cream font-sans selection:bg-caramel selection:text-chocolate">
+            <Navbar />
+            <main>
+              <AnimatedRoutes />
+            </main>
+          </div>
+        </div>
+      </TransitionProvider>
+    </CartProvider>
   );
 }
 
