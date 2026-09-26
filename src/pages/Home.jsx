@@ -1,16 +1,84 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { motion, useScroll, useTransform, useMotionValue, useMotionTemplate } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import gsap from 'gsap';
 import CookieJar from '../components/CookieJar';
 import Footer from '../components/Footer';
 
 import MagneticButton from '../components/MagneticButton';
+import { usePageTransition } from '../context/TransitionContext';
 
 
 const Home = () => {
+    const navigate = useNavigate();
+    const { switchPage } = usePageTransition();
+
+    const handleGoToShop = () => {
+        if (switchPage) {
+            switchPage('/shop');
+        } else {
+            navigate('/shop');
+        }
+    };
+
     const containerRef = useRef(null);
     const { scrollYProgress } = useScroll({ target: containerRef });
     const yHero = useTransform(scrollYProgress, [0, 0.25], [0, -60]);
     const opacityHero = useTransform(scrollYProgress, [0, 0.25], [1, 0.3]);
+
+    // GSAP Text Arise Transition on mount
+    useEffect(() => {
+        const ctx = gsap.context(() => {
+            gsap.set('.hero-char-coral', { yPercent: 125, opacity: 0 });
+            gsap.set('.hero-char-cookies', { yPercent: 125, opacity: 0 });
+            gsap.set('.hero-title-dot', { scale: 0, opacity: 0 });
+            gsap.set('.hero-subtitle', { y: 25, opacity: 0 });
+            gsap.set('.hero-cta', { y: 30, opacity: 0 });
+            gsap.set('.hero-badge', { y: 20, opacity: 0 });
+
+            const tl = gsap.timeline({ defaults: { ease: 'power4.out' }, delay: 0.1 });
+
+            tl.to('.hero-badge', {
+                y: 0,
+                opacity: 1,
+                duration: 0.8,
+            })
+            .to('.hero-char-coral', {
+                yPercent: 0,
+                opacity: 1,
+                duration: 1.1,
+                stagger: 0.045,
+                ease: 'power4.out',
+            }, "-=0.6")
+            .to('.hero-char-cookies', {
+                yPercent: 0,
+                opacity: 1,
+                duration: 1.1,
+                stagger: 0.045,
+                ease: 'power4.out',
+            }, "-=0.9")
+            .to('.hero-title-dot', {
+                scale: 1,
+                opacity: 1,
+                duration: 0.6,
+                ease: 'back.out(2)',
+            }, "-=0.5")
+            .to('.hero-subtitle', {
+                y: 0,
+                opacity: 1,
+                duration: 0.9,
+                ease: 'power3.out',
+            }, "-=0.6")
+            .to('.hero-cta', {
+                y: 0,
+                opacity: 1,
+                duration: 0.85,
+                ease: 'power3.out',
+            }, "-=0.6");
+        }, containerRef);
+
+        return () => ctx.revert();
+    }, []);
 
     // Mouse Parallax for Hero
     const mouseX = useMotionValue(0);
@@ -45,64 +113,50 @@ const Home = () => {
                 <motion.div style={{ y: yHero, opacity: opacityHero }} className="relative z-10 text-center px-4 max-w-5xl mx-auto flex flex-col items-center">
 
                     {/* Badge */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8 }}
-                        className="inline-flex items-center gap-2 mb-3 md:mb-5 px-4 py-1.5 rounded-full border border-white/5 bg-white/5 backdrop-blur-md"
-                    >
+                    <div className="hero-badge inline-flex items-center gap-2 mb-3 md:mb-5 px-4 py-1.5 rounded-full border border-white/5 bg-white/5 backdrop-blur-md opacity-0">
                         <span className="w-2 h-2 rounded-full bg-caramel animate-pulse" />
                         <span className="text-xs uppercase tracking-[0.2em] text-cream/80">Artisanal Bakery</span>
-                    </motion.div>
+                    </div>
 
                     {/* Main Title - Split Character Reveal */}
                     <h1 className="text-[12vw] sm:text-[10vw] md:text-[6.5rem] lg:text-[7.8rem] xl:text-[8.5rem] leading-[0.88] font-serif font-medium tracking-tighter relative select-none">
                         <div className="overflow-hidden inline-flex py-1 px-2">
                             {"Coral".split("").map((char, i) => (
-                                <motion.span
+                                <span
                                     key={i}
-                                    initial={{ y: "100%" }}
-                                    animate={{ y: 0 }}
-                                    transition={{ duration: 0.8, delay: i * 0.05, ease: [0.33, 1, 0.68, 1] }}
-                                    className="inline-block text-transparent bg-clip-text bg-linear-to-b from-cream via-[#e8dcc6] to-[#cba379]"
+                                    className="hero-char-coral inline-block text-transparent bg-clip-text bg-linear-to-b from-cream via-[#e8dcc6] to-[#cba379] opacity-0"
                                 >
                                     {char}
-                                </motion.span>
+                                </span>
                             ))}
                         </div>
                         <br />
-                        <div className="overflow-hidden inline-flex py-1 px-4 -mr-4">
+                        <div className="overflow-hidden inline-flex items-baseline py-1 px-4 -mr-4">
                             {"Cookies".split("").map((char, i) => (
-                                <motion.span
+                                <span
                                     key={i}
-                                    initial={{ y: "100%" }}
-                                    animate={{ y: 0 }}
-                                    transition={{ duration: 0.8, delay: 0.1 + i * 0.05, ease: [0.33, 1, 0.68, 1] }}
-                                    className={`inline-block italic text-caramel ${i === "Cookies".length - 1 ? "pr-3" : ""}`}
+                                    className={`hero-char-cookies inline-block italic text-caramel opacity-0 ${i === "Cookies".length - 1 ? "pr-1 sm:pr-2" : ""}`}
                                 >
                                     {char}
-                                </motion.span>
+                                </span>
                             ))}
+                            {/* Accent Dot */}
+                            <span
+                                className="hero-title-dot inline-block w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-caramel ml-1 sm:ml-2 shadow-sm shadow-caramel/40 opacity-0"
+                            />
                         </div>
                     </h1>
 
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 1, duration: 1 }}
-                        className="mt-4 md:mt-5 text-sm sm:text-base md:text-lg text-cream/75 max-w-md md:max-w-lg mx-auto font-light leading-relaxed tracking-wide"
-                    >
+                    <p className="hero-subtitle mt-4 md:mt-5 text-sm sm:text-base md:text-lg text-cream/75 max-w-md md:max-w-lg mx-auto font-light leading-relaxed tracking-wide opacity-0">
                         Where every crumb is a masterpiece. Hand-mixed, slow-baked, and delivered with unconditional love.
-                    </motion.p>
+                    </p>
 
                     {/* CTA Buttons */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 1.2, duration: 0.8 }}
-                        className="mt-6 md:mt-8 flex flex-row items-center justify-center gap-4"
-                    >
-                        <MagneticButton className="group relative px-6 md:px-8 py-3.5 md:py-4 bg-caramel hover:bg-[#d48c45] text-[#2b1b17] rounded-full font-bold text-sm md:text-base tracking-wide transition-all overflow-hidden shadow-lg shadow-caramel/10">
+                    <div className="hero-cta mt-6 md:mt-8 flex flex-row items-center justify-center gap-4 opacity-0">
+                        <MagneticButton
+                            onClick={handleGoToShop}
+                            className="group relative px-6 md:px-8 py-3.5 md:py-4 bg-caramel hover:bg-[#d48c45] text-[#2b1b17] rounded-full font-bold text-sm md:text-base tracking-wide transition-all overflow-hidden shadow-lg shadow-caramel/10 cursor-pointer"
+                        >
                             <span className="relative z-10 flex items-center gap-2">
                                 Order Now
                                 <svg width="15" height="15" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:translate-x-1 transition-transform">
@@ -111,10 +165,8 @@ const Home = () => {
                             </span>
                         </MagneticButton>
 
-                        <MagneticButton className="px-6 md:px-8 py-3.5 md:py-4 border border-white/20 hover:bg-white/5 text-cream rounded-full font-medium text-sm md:text-base tracking-wide transition-colors">
-                            Explore Menu
-                        </MagneticButton>
-                    </motion.div>
+                        
+                    </div>
 
                 </motion.div>
             </section>

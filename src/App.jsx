@@ -2,15 +2,22 @@ import React, { useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import Lenis from 'lenis';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Navbar from './components/Navbar';
+
+gsap.registerPlugin(ScrollTrigger);
 import Home from './pages/Home';
 import Shop from './pages/Shop';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import Checkout from './pages/Checkout';
 
 import { TransitionProvider } from './context/TransitionContext';
 import { CartProvider } from './context/CartContext';
 import CustomCursor from './components/CustomCursor';
+import BackToTop from './components/BackToTop';
+import ChatbotWidget from './components/ChatbotWidget';
 
 
 function AnimatedRoutes() {
@@ -23,6 +30,7 @@ function AnimatedRoutes() {
         <Route path="/shop" element={<Shop />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/checkout" element={<Checkout />} />
       </Routes>
     </AnimatePresence>
   );
@@ -41,6 +49,8 @@ function AppContent() {
             <main>
               <AnimatedRoutes />
             </main>
+            <ChatbotWidget />
+            <BackToTop />
           </div>
         </div>
       </TransitionProvider>
@@ -60,6 +70,8 @@ function App() {
       smoothTouch: false,
       touchMultiplier: 2,
     });
+
+    lenis.on('scroll', ScrollTrigger.update);
 
     function raf(time) {
       lenis.raf(time);

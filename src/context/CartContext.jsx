@@ -24,7 +24,20 @@ export const CartProvider = ({ children }) => {
         }
         return [];
     });
+    const [wishlist, setWishlist] = useState(() => {
+        const savedWishlist = localStorage.getItem('coral_cookies_wishlist');
+        if (savedWishlist) {
+            try {
+                return JSON.parse(savedWishlist);
+            } catch (e) {
+                console.error("Failed to parse wishlist", e);
+                return [];
+            }
+        }
+        return [];
+    });
     const [isCartOpen, setIsCartOpen] = useState(false);
+    const [isWishlistOpen, setIsWishlistOpen] = useState(false);
     const [notification, setNotification] = useState(null);
 
     const showNotification = (message) => {
@@ -36,6 +49,33 @@ export const CartProvider = ({ children }) => {
     useEffect(() => {
         localStorage.setItem('coral_cookies_cart', JSON.stringify(cart));
     }, [cart]);
+
+    // Save wishlist to localStorage
+    useEffect(() => {
+        localStorage.setItem('coral_cookies_wishlist', JSON.stringify(wishlist));
+    }, [wishlist]);
+
+    const toggleWishlist = (product) => {
+        if (!product) return;
+        setWishlist((prev) => {
+            const exists = prev.some((item) => item.id === product.id);
+            if (exists) {
+                showNotification(`Removed ${product.name} from wishlist`);
+                return prev.filter((item) => item.id !== product.id);
+            } else {
+                showNotification(`Saved ${product.name} to wishlist! ❤️`);
+                return [...prev, product];
+            }
+        });
+    };
+
+    const isInWishlist = (productId) => {
+        return wishlist.some((item) => item.id === productId);
+    };
+
+    const removeFromWishlist = (productId) => {
+        setWishlist((prev) => prev.filter((item) => item.id !== productId));
+    };
 
     const addToCart = (product) => {
         if (!product) return;
@@ -79,6 +119,7 @@ export const CartProvider = ({ children }) => {
 
     const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
     const cartTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    const wishlistCount = wishlist.length;
 
     return (
         <CartContext.Provider
@@ -92,6 +133,13 @@ export const CartProvider = ({ children }) => {
                 cartTotal,
                 isCartOpen,
                 setIsCartOpen,
+                wishlist,
+                toggleWishlist,
+                isInWishlist,
+                removeFromWishlist,
+                wishlistCount,
+                isWishlistOpen,
+                setIsWishlistOpen,
                 notification
             }}
         >

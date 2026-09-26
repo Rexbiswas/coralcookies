@@ -39,6 +39,14 @@ body {
   overflow-x: hidden;
 }
 
+html.shelf-mode,
+body.shelf-mode {
+  overflow: hidden !important;
+  height: 100% !important;
+  max-height: 100vh !important;
+  max-height: 100dvh !important;
+}
+
 ::selection {
   background-color: var(--color-caramel);
   color: var(--color-chocolate);
@@ -69,4 +77,16 @@ body {
     scrollbar-width: thin;
     scrollbar-color: var(--color-caramel) var(--color-chocolate);
   }
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }

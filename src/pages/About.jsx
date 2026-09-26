@@ -45,6 +45,143 @@ const FeatureCard = ({ icon: Icon, title, description, index }) => (
     </motion.div>
 );
 
+const MANIFESTO_LINES = [
+    {
+        words: "We believe that a cookie is more than just flour and sugar.".split(" "),
+        highlights: ["cookie", "flour", "sugar."]
+    },
+    {
+        words: "It's a memory of childhood, a moment of solace,".split(" "),
+        highlights: ["memory", "childhood,", "solace,"]
+    },
+    {
+        words: "and a universal language of love. Our mission is to".split(" "),
+        highlights: ["universal", "language", "love."]
+    },
+    {
+        words: "blend traditional craftsmanship with modern innovation.".split(" "),
+        highlights: ["traditional", "craftsmanship", "modern", "innovation."]
+    }
+];
+
+let cumulativeWords = 0;
+const PROCESSED_MANIFESTO_LINES = MANIFESTO_LINES.map((line) => {
+    const startIndex = cumulativeWords;
+    cumulativeWords += line.words.length;
+    return {
+        ...line,
+        startIndex,
+    };
+});
+const TOTAL_MANIFESTO_WORDS = cumulativeWords;
+
+const ManifestoWord = ({ word, progress, range, isHighlight }) => {
+    // Opacity interpolates smoothly from 0.18 to 1
+    const opacity = useTransform(progress, range, [0.18, 1]);
+
+    // Color dynamically shifts as user scrolls
+    const color = useTransform(
+        progress,
+        range,
+        isHighlight 
+            ? ["rgba(212, 140, 69, 0.25)", "#d48c45"] 
+            : ["rgba(253, 251, 247, 0.18)", "#fdfbf7"]
+    );
+
+    const y = useTransform(progress, range, [3, 0]);
+
+    return (
+        <motion.span
+            style={{ opacity, color, y }}
+            className={`inline-block mr-[0.26em] select-none transition-transform duration-100 ${
+                isHighlight ? "font-semibold drop-shadow-[0_0_15px_rgba(212,140,69,0.35)]" : ""
+            }`}
+        >
+            {word}
+        </motion.span>
+    );
+};
+
+const ManifestoSection = () => {
+    const sectionRef = useRef(null);
+    const { scrollYProgress } = useScroll({
+        target: sectionRef,
+        offset: ["start 0.85", "end 0.35"]
+    });
+
+    return (
+        <section ref={sectionRef} className="py-28 md:py-48 container mx-auto px-6 relative isolate">
+            {/* Ambient Warm Candlelight Glow */}
+            <div className="absolute top-1/2 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[500px] bg-radial from-caramel/15 via-cookie/5 to-transparent blur-3xl pointer-events-none -z-10" />
+
+            <div className="max-w-5xl mx-auto">
+                {/* Header with decorative badge */}
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-16 pb-8 border-b border-white/5">
+                    <div>
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="h-px w-8 bg-caramel" />
+                            <span className="text-caramel uppercase tracking-[0.3em] text-xs font-bold">Philosophy</span>
+                        </div>
+                        <h2 className="text-4xl sm:text-5xl md:text-6xl font-serif text-cream font-bold">
+                            The Manifesto
+                        </h2>
+                    </div>
+
+                </div>
+
+                {/* Content with Left Scroll Progress Rail */}
+                <div className="flex items-stretch gap-6 md:gap-12">
+                    {/* Vertical Progress Rail */}
+                    <div className="hidden sm:flex flex-col items-center relative py-2">
+                        <div className="w-[2px] flex-1 bg-white/10 rounded-full relative overflow-hidden">
+                            <motion.div 
+                                style={{ scaleY: scrollYProgress, originY: 0 }}
+                                className="w-full h-full bg-gradient-to-b from-cookie via-caramel to-amber-300"
+                            />
+                        </div>
+                        <motion.div
+                            style={{ 
+                                top: useTransform(scrollYProgress, [0, 1], ["0%", "98%"]) 
+                            }}
+                            className="absolute -left-[5px] w-3 h-3 rounded-full bg-caramel shadow-[0_0_12px_#d48c45] border border-chocolate"
+                        />
+                    </div>
+
+                    {/* Scrolling Text Lines */}
+                    <div className="space-y-10 md:space-y-14 flex-1">
+                        {PROCESSED_MANIFESTO_LINES.map((line, lineIdx) => (
+                            <p 
+                                key={lineIdx} 
+                                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif leading-[1.25] tracking-tight"
+                            >
+                                {line.words.map((word, wordIdx) => {
+                                    const globalIdx = line.startIndex + wordIdx;
+                                    const step = 1 / TOTAL_MANIFESTO_WORDS;
+                                    const start = (globalIdx / TOTAL_MANIFESTO_WORDS) * 0.85;
+                                    const end = Math.min(1, start + step * 2.2);
+                                    const isHighlight = line.highlights.some(h => 
+                                        word.toLowerCase().replace(/[.,]/g, '') === h.toLowerCase().replace(/[.,]/g, '')
+                                    );
+
+                                    return (
+                                        <ManifestoWord
+                                            key={wordIdx}
+                                            word={word}
+                                            progress={scrollYProgress}
+                                            range={[start, end]}
+                                            isHighlight={isHighlight}
+                                        />
+                                    );
+                                })}
+                            </p>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+};
+
 const About = () => {
     const containerRef = useRef(null);
     const { scrollYProgress } = useScroll({
@@ -112,30 +249,7 @@ const About = () => {
             </section>
 
             {/* THE MANIFESTO */}
-            <section className="py-32 md:py-64 container mx-auto px-6">
-                <div className="max-w-5xl">
-                    <SectionTitle subtitle="Philosophy">The Manifesto</SectionTitle>
-                    <div className="space-y-12">
-                        {[
-                            "We believe that a cookie is more than just flour and sugar.",
-                            "It's a memory of childhood, a moment of solace,",
-                            "and a universal language of love. Our mission is to",
-                            "blend traditional craftsmanship with modern innovation."
-                        ].map((text, i) => (
-                            <motion.p
-                                key={i}
-                                initial={{ opacity: 0, x: -20 }}
-                                whileInView={{ opacity: 1, x: 0 }}
-                                viewport={{ once: true, margin: "-100px" }}
-                                transition={{ delay: i * 0.1, duration: 0.8 }}
-                                className="text-3xl md:text-6xl font-serif text-cream leading-tight"
-                            >
-                                {text}
-                            </motion.p>
-                        ))}
-                    </div>
-                </div>
-            </section>
+            <ManifestoSection />
 
             {/* PROCESS SECTION */}
             <section className="py-32 bg-[#1a110e] rounded-[50px] relative z-20">
