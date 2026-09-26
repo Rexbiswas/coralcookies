@@ -9,7 +9,8 @@ import MagneticButton from '../components/MagneticButton';
 const Home = () => {
     const containerRef = useRef(null);
     const { scrollYProgress } = useScroll({ target: containerRef });
-    const yHero = useTransform(scrollYProgress, [0, 0.5], [0, 300]);
+    const yHero = useTransform(scrollYProgress, [0, 0.25], [0, -60]);
+    const opacityHero = useTransform(scrollYProgress, [0, 0.25], [1, 0.3]);
 
     // Mouse Parallax for Hero
     const mouseX = useMotionValue(0);
@@ -27,7 +28,7 @@ const Home = () => {
             className="min-h-screen relative overflow-hidden bg-[#2b1b17] text-cream font-sans selection:bg-caramel/30"
         >
             {/* HER0 SECTION */}
-            <section className="relative min-h-screen flex flex-col items-center justify-center isolate">
+            <section className="relative min-h-screen flex flex-col items-center justify-center pt-20 pb-8 md:pt-24 md:pb-12 px-4 isolate">
 
                 {/* Dynamic Background Gradients */}
                 <motion.div
@@ -41,43 +42,43 @@ const Home = () => {
                 <motion.div style={{ x: useTransform(mouseX, [-0.5, 0.5], [20, -20]), y: useTransform(mouseY, [-0.5, 0.5], [20, -20]) }} className="absolute top-[15%] left-[10%] w-32 h-32 rounded-full bg-caramel/20 blur-[80px]" />
                 <motion.div style={{ x: useTransform(mouseX, [-0.5, 0.5], [-30, 30]), y: useTransform(mouseY, [-0.5, 0.5], [-30, 30]) }} className="absolute bottom-[20%] right-[10%] w-64 h-64 rounded-full bg-cookie/10 blur-[100px]" />
 
-                <motion.div style={{ y: yHero }} className="relative z-10 text-center px-4">
+                <motion.div style={{ y: yHero, opacity: opacityHero }} className="relative z-10 text-center px-4 max-w-5xl mx-auto flex flex-col items-center">
 
                     {/* Badge */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8 }}
-                        className="inline-flex items-center gap-2 mb-8 px-4 py-2 rounded-full border border-white/5 bg-white/5 backdrop-blur-md"
+                        className="inline-flex items-center gap-2 mb-3 md:mb-5 px-4 py-1.5 rounded-full border border-white/5 bg-white/5 backdrop-blur-md"
                     >
                         <span className="w-2 h-2 rounded-full bg-caramel animate-pulse" />
                         <span className="text-xs uppercase tracking-[0.2em] text-cream/80">Artisanal Bakery</span>
                     </motion.div>
 
                     {/* Main Title - Split Character Reveal */}
-                    <h1 className="text-[15vw] md:text-[11rem] leading-[0.85] font-serif font-medium tracking-tighter text-transparent bg-clip-text bg-linear-to-b from-cream via-[#e8dcc6] to-[#cba379] relative">
-                        <div className="overflow-hidden inline-flex">
+                    <h1 className="text-[12vw] sm:text-[10vw] md:text-[6.5rem] lg:text-[7.8rem] xl:text-[8.5rem] leading-[0.88] font-serif font-medium tracking-tighter relative select-none">
+                        <div className="overflow-hidden inline-flex py-1 px-2">
                             {"Coral".split("").map((char, i) => (
                                 <motion.span
                                     key={i}
                                     initial={{ y: "100%" }}
                                     animate={{ y: 0 }}
                                     transition={{ duration: 0.8, delay: i * 0.05, ease: [0.33, 1, 0.68, 1] }}
-                                    className="inline-block"
+                                    className="inline-block text-transparent bg-clip-text bg-linear-to-b from-cream via-[#e8dcc6] to-[#cba379]"
                                 >
                                     {char}
                                 </motion.span>
                             ))}
                         </div>
                         <br />
-                        <div className="overflow-hidden inline-flex">
+                        <div className="overflow-hidden inline-flex py-1 px-4 -mr-4">
                             {"Cookies".split("").map((char, i) => (
                                 <motion.span
                                     key={i}
                                     initial={{ y: "100%" }}
                                     animate={{ y: 0 }}
                                     transition={{ duration: 0.8, delay: 0.1 + i * 0.05, ease: [0.33, 1, 0.68, 1] }}
-                                    className="inline-block italic text-caramel opacity-90"
+                                    className={`inline-block italic text-caramel ${i === "Cookies".length - 1 ? "pr-3" : ""}`}
                                 >
                                     {char}
                                 </motion.span>
@@ -89,7 +90,7 @@ const Home = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 1, duration: 1 }}
-                        className="mt-8 text-lg md:text-xl text-white/60 max-w-lg mx-auto font-light leading-relaxed tracking-wide"
+                        className="mt-4 md:mt-5 text-sm sm:text-base md:text-lg text-cream/75 max-w-md md:max-w-lg mx-auto font-light leading-relaxed tracking-wide"
                     >
                         Where every crumb is a masterpiece. Hand-mixed, slow-baked, and delivered with unconditional love.
                     </motion.p>
@@ -99,18 +100,18 @@ const Home = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 1.2, duration: 0.8 }}
-                        className="mt-12 flex flex-col md:flex-row items-center justify-center gap-6"
+                        className="mt-6 md:mt-8 flex flex-row items-center justify-center gap-4"
                     >
-                        <MagneticButton className="group relative px-8 py-4 bg-caramel hover:bg-[#d48c45] text-[#2b1b17] rounded-full font-bold text-lg tracking-wide transition-all overflow-hidden">
+                        <MagneticButton className="group relative px-6 md:px-8 py-3.5 md:py-4 bg-caramel hover:bg-[#d48c45] text-[#2b1b17] rounded-full font-bold text-sm md:text-base tracking-wide transition-all overflow-hidden shadow-lg shadow-caramel/10">
                             <span className="relative z-10 flex items-center gap-2">
                                 Order Now
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:translate-x-1 transition-transform">
+                                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:translate-x-1 transition-transform">
                                     <path d="M1 8H15M15 8L8 1M15 8L8 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             </span>
                         </MagneticButton>
 
-                        <MagneticButton className="px-8 py-4 border border-white/20 hover:bg-white/5 text-cream rounded-full font-medium text-lg tracking-wide transition-colors">
+                        <MagneticButton className="px-6 md:px-8 py-3.5 md:py-4 border border-white/20 hover:bg-white/5 text-cream rounded-full font-medium text-sm md:text-base tracking-wide transition-colors">
                             Explore Menu
                         </MagneticButton>
                     </motion.div>
@@ -119,7 +120,7 @@ const Home = () => {
             </section>
 
             {/* Scrolling Marquee Section */}
-            <div className="relative py-12 bg-caramel text-[#2b1b17] overflow-hidden -rotate-2 scale-105 z-20 border-y-4 border-[#2b1b17]">
+            <div className="relative py-8 md:py-10 bg-caramel text-[#2b1b17] overflow-hidden -rotate-2 scale-105 z-20 border-y-4 border-[#2b1b17]">
                 <div className="flex whitespace-nowrap overflow-hidden">
                     <motion.div
                         animate={{ x: "-50%" }}
