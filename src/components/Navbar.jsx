@@ -149,7 +149,7 @@ const Navbar = () => {
 
     return (
         <>
-            <div className="fixed top-0 left-0 right-0 z-150 flex justify-center pointer-events-none">
+            <div id="main-navbar" className="fixed top-0 left-0 right-0 z-150 flex justify-center pointer-events-none main-navbar">
                 <motion.nav
                     style={{
                         width: navWidth,

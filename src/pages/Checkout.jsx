@@ -316,7 +316,7 @@ export default function Checkout() {
         address: '',
         apartment: '',
         city: '',
-        state: 'CA',
+        state: '',
         zip: '',
         deliveryMethod: 'standard', // 'standard' | 'express' | 'luxury_concierge'
         bakeTimeSlot: 'afternoon', // 'immediate' | 'afternoon' | 'evening' | 'tomorrow'
@@ -338,6 +338,7 @@ export default function Checkout() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [completedOrder, setCompletedOrder] = useState(null);
     const [showEmailModal, setShowEmailModal] = useState(false);
+    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
     const [copiedEmail, setCopiedEmail] = useState(false);
     const [deliveryEtaCounter, setDeliveryEtaCounter] = useState(38); // live countdown in minutes
     const [emailSendStatus, setEmailSendStatus] = useState({ sending: false, success: false, error: null, timestamp: null });
@@ -345,6 +346,22 @@ export default function Checkout() {
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [currentStep]);
+
+    // Hide Navbar when actual invoice bill modal is shown
+    useEffect(() => {
+        const navbar = document.getElementById('main-navbar') || document.querySelector('nav');
+        if (showInvoiceModal) {
+            if (navbar) navbar.style.display = 'none';
+            document.body.classList.add('invoice-modal-active');
+        } else {
+            if (navbar) navbar.style.display = '';
+            document.body.classList.remove('invoice-modal-active');
+        }
+        return () => {
+            if (navbar) navbar.style.display = '';
+            document.body.classList.remove('invoice-modal-active');
+        };
+    }, [showInvoiceModal]);
 
     // Recommended items from catalogue not currently in cart
     const suggestedCookies = useMemo(() => {
@@ -470,12 +487,15 @@ export default function Checkout() {
 
         setTimeout(() => {
             const orderId = `CR-${Math.floor(100000 + Math.random() * 900000)}`;
-            const dateStr = new Date().toLocaleDateString('en-US', {
-                year: 'numeric',
+            const now = new Date();
+            const dateStr = now.toLocaleString('en-IN', {
+                timeZone: 'Asia/Kolkata',
+                day: '2-digit',
                 month: 'short',
-                day: 'numeric',
+                year: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                hour12: true
             });
 
             let displayPayment = 'Card ending in •••• ' + (formData.cardNumber ? formData.cardNumber.slice(-4) : '4242');
@@ -496,14 +516,14 @@ export default function Checkout() {
                 paymentMethod: displayPayment,
                 giftNote: formData.isGift ? formData.giftNote : null,
                 customer: {
-                    name: `${formData.firstName || 'Eleanor'} ${formData.lastName || 'Vance'}`,
+                    name: `${formData.firstName || 'Guest'} ${formData.lastName || 'Customer'}`.trim(),
                     email: formData.email || 'customer@coralcookies.com',
-                    phone: formData.phone || '+1 (555) 019-2834',
-                    address: `${formData.address || '742 Evergreen Terrace'}${formData.apartment ? ', ' + formData.apartment : ''}`,
-                    city: formData.city || 'San Francisco',
-                    state: formData.state || 'CA',
-                    zip: formData.zip || '94107',
-                    country: 'United States',
+                    phone: formData.phone || '+91 98765 43210',
+                    address: `${formData.address || 'Marine Drive'}${formData.apartment ? ', ' + formData.apartment : ''}`,
+                    city: formData.city || 'Mumbai',
+                    state: formData.state || 'Maharashtra',
+                    zip: formData.zip || '400020',
+                    country: 'India',
                 }
             };
 
@@ -688,11 +708,11 @@ export default function Checkout() {
 
                             <button
                                 type="button"
-                                onClick={() => window.print()}
-                                className="px-4 py-3.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-cream/70 hover:text-white transition-all cursor-pointer"
-                                title="Print Receipt"
+                                onClick={() => setShowInvoiceModal(true)}
+                                className="px-4 py-3.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-cream/70 hover:text-white transition-all cursor-pointer group relative"
+                                title="View & Print Official Invoice Bill"
                             >
-                                <Printer size={16} />
+                                <Printer size={16} className="group-hover:scale-110 transition-transform text-caramel" />
                             </button>
                         </div>
                     </motion.div>
@@ -864,7 +884,7 @@ export default function Checkout() {
                 {/* Email Preview Modal */}
                 <AnimatePresence>
                     {showEmailModal && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
@@ -935,6 +955,265 @@ export default function Checkout() {
                                             <Download size={12} />
                                             <span>Download Attachment</span>
                                         </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+
+                    {/* Actual Confectionery Tax Invoice Bill Modal */}
+                    {showInvoiceModal && completedOrder && (
+                        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto">
+                            <style>{`
+                                #main-navbar, .main-navbar, nav, header {
+                                    display: none !important;
+                                }
+                                @media print {
+                                    body * {
+                                        visibility: hidden !important;
+                                    }
+                                    #actual-invoice-bill, #actual-invoice-bill * {
+                                        visibility: visible !important;
+                                    }
+                                    #actual-invoice-bill {
+                                        position: fixed !important;
+                                        left: 0 !important;
+                                        top: 0 !important;
+                                        width: 100% !important;
+                                        height: auto !important;
+                                        margin: 0 !important;
+                                        padding: 24px !important;
+                                        background: white !important;
+                                        color: #1a1a1a !important;
+                                        box-shadow: none !important;
+                                        border: none !important;
+                                        z-index: 999999 !important;
+                                    }
+                                    .no-print {
+                                        display: none !important;
+                                    }
+                                }
+                            `}</style>
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                                className="max-w-3xl w-full my-auto flex flex-col rounded-3xl overflow-hidden shadow-2xl border border-amber-500/25 bg-[#170e0b] relative text-cream"
+                            >
+                                {/* Top Modal Header / Action Bar */}
+                                <div className="flex items-center justify-between px-6 py-4 bg-[#1f120e] border-b border-white/10 no-print">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-full bg-caramel/20 flex items-center justify-center text-caramel">
+                                            <FileText size={18} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-serif font-bold text-cream text-base leading-tight">Official Confectionery Invoice Bill</h3>
+                                            <p className="text-[11px] text-white/50">Tax Invoice & Delivery Receipt • #{completedOrder.orderId}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => window.print()}
+                                            className="px-3.5 py-1.5 rounded-xl bg-caramel text-chocolate hover:brightness-110 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-caramel/20 cursor-pointer active:scale-95"
+                                            title="Print Physical Receipt"
+                                        >
+                                            <Printer size={14} />
+                                            <span>Print Bill</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => generateInvoicePDF(completedOrder)}
+                                            className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-cream font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                                            title="Download PDF Invoice"
+                                        >
+                                            <Download size={14} />
+                                            <span>PDF</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowInvoiceModal(false)}
+                                            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white flex items-center justify-center transition-colors cursor-pointer ml-1"
+                                            aria-label="Close"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Bill Scrollable Body */}
+                                <div className="p-4 sm:p-8 overflow-y-auto max-h-[80vh] no-scrollbar">
+                                    {/* ACTUAL INVOICE SHEET (Paper Bill Look) */}
+                                    <div 
+                                        id="actual-invoice-bill" 
+                                        className="bg-[#fcfaf7] text-[#2c1a14] rounded-2xl p-6 sm:p-10 shadow-lg border border-[#e8dfd5] font-sans selection:bg-[#ebd5bd] selection:text-[#2c1a14]"
+                                    >
+                                        {/* Invoice Header */}
+                                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b-2 border-[#d48c45]/30">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="font-serif font-black tracking-[0.2em] text-2xl text-[#2b170e]">
+                                                        CORAL COOKIES
+                                                    </span>
+                                                </div>
+                                                <p className="text-[11px] font-serif uppercase tracking-[0.25em] text-[#d48c45] font-bold">
+                                                    Haute Artisanal Patisserie & Confectionery
+                                                </p>
+                                                <p className="text-xs text-[#705e56] mt-2 leading-relaxed">
+                                                    14 Heritage Promenade, Connaught Place<br />
+                                                    New Delhi, DL 110001, India<br />
+                                                    <span className="font-mono text-[11px]">GSTIN: 07AAACC4918K1Z5 • FSSAI: 10022011000492</span>
+                                                </p>
+                                            </div>
+
+                                            <div className="text-left sm:text-right bg-[#f4ece3] p-3.5 rounded-xl border border-[#dfd2c4] min-w-[220px]">
+                                                <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#2b170e] text-[#f5e6d3] text-[10px] font-bold tracking-widest uppercase mb-1.5">
+                                                    TAX INVOICE / CASH BILL
+                                                </span>
+                                                <p className="text-xs font-bold text-[#2b170e]">
+                                                    Invoice #: <span className="font-mono font-bold text-[#d48c45]">INV-{completedOrder.orderId}</span>
+                                                </p>
+                                                <p className="text-xs text-[#5c4941]">
+                                                    Order ID: <strong className="font-mono text-[#2b170e]">#{completedOrder.orderId}</strong>
+                                                </p>
+                                                <p className="text-xs text-[#5c4941] mt-0.5">
+                                                    Date: <strong className="text-[#2b170e]">{completedOrder.date}</strong>
+                                                </p>
+                                                <p className="text-[11px] text-[#806f67] mt-0.5">
+                                                    Status: <strong className="text-emerald-700 font-bold uppercase">PAID & CONFIRMED</strong>
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Customer & Delivery Metadata */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-6 border-b border-[#ebdcd0] text-xs">
+                                            <div>
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#a48e83] block mb-1">
+                                                    BILLED & DELIVERED TO
+                                                </span>
+                                                <p className="font-bold text-sm text-[#2b170e]">{completedOrder.customer.name}</p>
+                                                <p className="text-[#5c4941] mt-0.5">{completedOrder.customer.address}</p>
+                                                <p className="text-[#5c4941]">{completedOrder.customer.city}, {completedOrder.customer.state} {completedOrder.customer.zip}</p>
+                                                <p className="text-[#5c4941]">{completedOrder.customer.country || 'India'}</p>
+                                                <p className="text-[#5c4941] mt-1 font-mono">{completedOrder.customer.phone} • {completedOrder.customer.email}</p>
+                                            </div>
+
+                                            <div className="sm:text-right">
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#a48e83] block mb-1">
+                                                    DISPATCH & PAYMENT PARTICULARS
+                                                </span>
+                                                <p className="text-[#5c4941]">
+                                                    Payment Method: <strong className="text-[#2b170e]">{completedOrder.paymentMethod}</strong>
+                                                </p>
+                                                <p className="text-[#5c4941] mt-0.5">
+                                                    Delivery Tier: <strong className="text-[#2b170e]">{completedOrder.deliveryMethodLabel || 'Standard Delivery'}</strong>
+                                                </p>
+                                                <p className="text-[#5c4941] mt-0.5">
+                                                    Hearth Bake Slot: <strong className="text-[#2b170e] capitalize">{completedOrder.bakeTimeSlot || 'Immediate Batch'}</strong>
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Items Table */}
+                                        <div className="py-6 overflow-x-auto">
+                                            <table className="w-full text-left text-xs">
+                                                <thead>
+                                                    <tr className="border-b-2 border-[#2b170e] text-[#2b170e] font-serif uppercase tracking-wider text-[11px]">
+                                                        <th className="pb-2 text-center w-8">#</th>
+                                                        <th className="pb-2">Cookie Selection</th>
+                                                        <th className="pb-2 text-center">Packaging</th>
+                                                        <th className="pb-2 text-center">Qty</th>
+                                                        <th className="pb-2 text-right">Unit Price</th>
+                                                        <th className="pb-2 text-right">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-[#ebdcd0]">
+                                                    {completedOrder.items.map((item, idx) => (
+                                                        <tr key={item.id || idx} className="hover:bg-[#f5ece3]/50">
+                                                            <td className="py-3 text-center text-[#9c8a81] font-mono">{idx + 1}</td>
+                                                            <td className="py-3 font-semibold text-[#2b170e]">
+                                                                {item.name}
+                                                                {item.customization && (
+                                                                    <span className="block text-[10px] font-normal text-[#806f67]">Custom artisanal craft</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="py-3 text-center text-[#705e56] font-mono">1 pck</td>
+                                                            <td className="py-3 text-center font-bold text-[#2b170e] font-mono">{item.quantity}</td>
+                                                            <td className="py-3 text-right text-[#5c4941] font-mono">₹{item.price.toFixed(2)}</td>
+                                                            <td className="py-3 text-right font-bold text-[#2b170e] font-mono">
+                                                                ₹{(item.price * item.quantity).toFixed(2)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* Bottom Financial Summary & Stamp */}
+                                        <div className="pt-4 border-t-2 border-[#d48c45]/30 grid grid-cols-1 sm:grid-cols-12 gap-6 items-end">
+                                            {/* Left: Gift Note & Stamp */}
+                                            <div className="sm:col-span-7 space-y-4">
+                                                {completedOrder.giftNote && (
+                                                    <div className="p-3.5 bg-[#f5ece3] border border-[#d8c5b5] rounded-xl text-xs">
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#d48c45] block mb-1">
+                                                            Handwritten Calligraphy Gift Inscription:
+                                                        </span>
+                                                        <p className="font-serif italic text-[#3d271e]">"{completedOrder.giftNote}"</p>
+                                                    </div>
+                                                )}
+
+                                                {/* Luxury Authenticity Verified Badge */}
+                                                <div className="inline-flex items-center gap-3 p-2.5 rounded-xl border border-emerald-600/30 bg-emerald-50 text-emerald-900">
+                                                    <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold">
+                                                        <Check size={16} />
+                                                    </div>
+                                                    <div className="text-[11px] leading-tight">
+                                                        <p className="font-bold uppercase tracking-wider text-emerald-800">Authentic Confectionery Invoice</p>
+                                                        <p className="text-emerald-700 text-[10px]">Baked Fresh at 185°C • 100% Single-Origin Cacao</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Right: Calculations */}
+                                            <div className="sm:col-span-5 space-y-1.5 text-xs text-[#5c4941]">
+                                                <div className="flex justify-between py-0.5">
+                                                    <span>Subtotal</span>
+                                                    <span className="font-mono font-semibold text-[#2b170e]">₹{completedOrder.subtotal.toFixed(2)}</span>
+                                                </div>
+                                                {completedOrder.discount > 0 && (
+                                                    <div className="flex justify-between py-0.5 text-emerald-700">
+                                                        <span>Discount ({completedOrder.promoCode || 'PROMO'})</span>
+                                                        <span className="font-mono font-semibold">-₹{completedOrder.discount.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between py-0.5">
+                                                    <span>Shipping & Packaging</span>
+                                                    <span className="font-mono font-semibold text-[#2b170e]">
+                                                        {completedOrder.shipping === 0 ? 'COMPLIMENTARY' : `₹${completedOrder.shipping.toFixed(2)}`}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between py-0.5">
+                                                    <span>CGST (2.5%)</span>
+                                                    <span className="font-mono font-semibold text-[#2b170e]">₹{(completedOrder.tax / 2).toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between py-0.5">
+                                                    <span>SGST (2.5%)</span>
+                                                    <span className="font-mono font-semibold text-[#2b170e]">₹{(completedOrder.tax / 2).toFixed(2)}</span>
+                                                </div>
+
+                                                <div className="pt-2 border-t-2 border-[#2b170e] flex justify-between items-center text-sm font-bold text-[#2b170e]">
+                                                    <span>TOTAL PAID</span>
+                                                    <span className="font-mono text-base text-[#9e571c]">₹{completedOrder.total.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Invoice Footer Notes */}
+                                        <div className="mt-8 pt-4 border-t border-[#ebdcd0] text-center text-[10px] text-[#8f7e76] space-y-1">
+                                            <p>This is a computer-generated authorized confectionery invoice and requires no physical seal.</p>
+                                            <p className="font-serif italic text-[#705e56]">Thank you for ordering with Coral Cookies Haute Patisserie.</p>
+                                        </div>
                                     </div>
                                 </div>
                             </motion.div>

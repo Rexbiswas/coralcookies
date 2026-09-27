@@ -15,34 +15,47 @@ app.use(express.json());
 // ==========================================
 // 1. MongoDB Atlas Database Connection
 // ==========================================
-if (process.env.MONGODB_URI) {
-    mongoose
-        .connect(process.env.MONGODB_URI, {
+async function connectDB() {
+    if (mongoose.connection.readyState === 1) return mongoose.connection;
+    if (!process.env.MONGODB_URI) {
+        console.log('[DATABASE] No MONGODB_URI found in environment variables.');
+        return null;
+    }
+    try {
+        await mongoose.connect(process.env.MONGODB_URI, {
             dbName: 'coralcookies',
             serverSelectionTimeoutMS: 5000,
-        })
-        .then(() => {
-            console.log('[DATABASE] Connected to MongoDB Atlas (coraldb.cwbu37z.mongodb.net / coralcookies)');
-        })
-        .catch((err) => {
-            console.error('[DATABASE] MongoDB Atlas connection error:', err.message);
         });
-} else {
-    console.log('[DATABASE] No MONGODB_URI found in environment variables.');
+        console.log('[DATABASE] Connected to MongoDB Atlas (coraldb.cwbu37z.mongodb.net / coralcookies)');
+        return mongoose.connection;
+    } catch (err) {
+        console.error('[DATABASE] MongoDB Atlas connection error:', err.message);
+        return null;
+    }
 }
+
+// Initial connection attempt on process startup
+connectDB();
 
 // Order Schema for MongoDB Persistence
 const orderSchema = new mongoose.Schema(
     {
         orderId: { type: String, required: true, unique: true },
+        date: String,
+        orderDateIST: String,
+        orderTimeIST: String,
+        createdAtIST: String,
+        timezone: { type: String, default: 'Asia/Kolkata (IST +05:30)' },
         customer: {
             fullName: String,
+            name: String,
             email: String,
             phone: String,
             address: String,
             city: String,
             state: String,
             zip: String,
+            country: String,
         },
         items: [
             {
@@ -50,22 +63,30 @@ const orderSchema = new mongoose.Schema(
                 name: String,
                 price: Number,
                 quantity: Number,
+                unit: { type: String, default: 'pck' },
                 customization: mongoose.Schema.Types.Mixed,
             },
         ],
         subtotal: Number,
         tax: Number,
         deliveryFee: Number,
+        shipping: Number,
         total: Number,
         deliveryTier: String,
+        deliveryMethodLabel: String,
+        bakeTimeSlot: String,
         scheduleDate: String,
         scheduleTime: String,
         paymentMethod: String,
+        giftNote: String,
+        promoCode: String,
+        discount: Number,
         status: { type: String, default: 'Confirmed' },
         emailStatus: {
             sent: Boolean,
             messageId: String,
             sentAt: Date,
+            sentAtIST: String,
         },
     },
     { timestamps: true }
@@ -245,7 +266,7 @@ function generateOrderHtml(orderData) {
 
             <!-- Footer -->
             <div style="background-color: #120907; padding: 20px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); font-size: 11px; color: rgba(255, 255, 255, 0.35);">
-                Coral Cookies Haute Artisanal Patisserie • San Francisco, CA<br>
+                Coral Cookies Haute Artisanal Patisserie • Connaught Place, New Delhi, India<br>
                 Questions? Email concierge@coralcookies.com
             </div>
         </div>
@@ -254,8 +275,8 @@ function generateOrderHtml(orderData) {
     `;
 }
 
-// API Route: Send Order Email
-app.post('/api/send-order-email', async (req, res) => {
+// API Route: Send Order Email (supports both direct and rewritten routes)
+app.post(['/api/send-order-email', '/send-order-email'], async (req, res) => {
     try {
         const orderData = req.body;
         if (!orderData || !orderData.customer || !orderData.customer.email) {
@@ -277,24 +298,48 @@ app.post('/api/send-order-email', async (req, res) => {
         const info = await transporter.sendMail(mailOptions);
         console.log(`[BACKEND]  Email sent in real time to ${recipient} (Message ID: ${info.messageId})`);
 
-        // Save or update order in MongoDB Atlas
+        // Format precise Indian Standard Time (IST / Asia/Kolkata)
+        const now = new Date();
+        const istDateStr = now.toLocaleDateString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        });
+        const istTimeStr = now.toLocaleTimeString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true,
+        });
+        const istFullTimestamp = `${istDateStr}, ${istTimeStr} IST`;
+
+        // Save or update order in MongoDB Atlas with explicit IST timestamping
         let dbSaved = false;
         try {
+            await connectDB();
             if (mongoose.connection.readyState === 1) {
                 await Order.findOneAndUpdate(
                     { orderId: orderData.orderId },
                     {
                         ...orderData,
+                        date: orderData.date || `${istDateStr}, ${istTimeStr}`,
+                        orderDateIST: istDateStr,
+                        orderTimeIST: istTimeStr,
+                        createdAtIST: istFullTimestamp,
+                        timezone: 'Asia/Kolkata (IST +05:30)',
                         emailStatus: {
                             sent: true,
                             messageId: info.messageId,
-                            sentAt: new Date(),
+                            sentAt: now,
+                            sentAtIST: istFullTimestamp,
                         },
                     },
                     { upsert: true, new: true }
                 );
                 dbSaved = true;
-                console.log(`[DATABASE] Order #${orderData.orderId} recorded in MongoDB Atlas ('orders' collection)`);
+                console.log(`[DATABASE] Order #${orderData.orderId} recorded in MongoDB Atlas ('orders' collection) at ${istFullTimestamp}`);
             }
         } catch (dbErr) {
             console.error('[DATABASE] Failed to save order to MongoDB:', dbErr.message);
@@ -313,7 +358,7 @@ app.post('/api/send-order-email', async (req, res) => {
             messageId: info.messageId,
             previewUrl,
             savedToDatabase: dbSaved,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestamp: istFullTimestamp,
         });
     } catch (error) {
         console.error('[BACKEND]  Failed to send email:', error);
@@ -324,19 +369,23 @@ app.post('/api/send-order-email', async (req, res) => {
     }
 });
 
-app.get('/api/health', (req, res) => {
+app.get(['/api/health', '/health'], (req, res) => {
     res.json({
         status: 'ok',
-        server: 'Express',
+        server: 'Express (Vercel Serverless & Local ready)',
         database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
         email: 'Nodemailer',
         timestamp: new Date().toISOString(),
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`[SERVER]   Coral Cookies Express API running on http://localhost:${PORT}`);
-    console.log(`[DATABASE] MongoDB Atlas linked: coraldb.cwbu37z.mongodb.net`);
-    console.log(`[BACKEND]  Nodemailer Real-time Email Dispatcher active`);
-});
+if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+        console.log(`[SERVER]   Coral Cookies Express API running on http://localhost:${PORT}`);
+        console.log(`[DATABASE] MongoDB Atlas linked: coraldb.cwbu37z.mongodb.net`);
+        console.log(`[BACKEND]  Nodemailer Real-time Email Dispatcher active`);
+    });
+}
+
+export default app;
 
