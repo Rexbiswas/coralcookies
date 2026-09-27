@@ -83,7 +83,7 @@ const Footer = () => {
 
                     <div className="relative mt-12 md:mt-0 md:absolute md:bottom-4 left-0 right-0 flex flex-col md:flex-row justify-between items-center md:items-end text-xs text-white/20 uppercase tracking-widest font-mono gap-4 md:gap-0 z-20">
                         <span>© 2026 Edition</span>
-                        <span className="text-caramel text-lg md:text-2xl font-serif capitalize tracking-normal text-center">Designed & Baked with Rishi ❤</span>
+                        <span className="text-caramel text-lg md:text-2xl font-serif capitalize tracking-normal text-center">Designed & Baked with 🤍 by Rishi</span>
                         <span>Privacy • Terms</span>
                     </div>
                 </div>

@@ -63,7 +63,7 @@ export const CartProvider = ({ children }) => {
                 showNotification(`Removed ${product.name} from wishlist`);
                 return prev.filter((item) => item.id !== product.id);
             } else {
-                showNotification(`Saved ${product.name} to wishlist! ❤️`);
+                showNotification(`Saved ${product.name} to wishlist!`);
                 return [...prev, product];
             }
         });

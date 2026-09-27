@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     CheckCircle2, 
@@ -12,15 +12,26 @@ import {
     Mail, 
     FileText, 
     ShoppingBag, 
-    ExternalLink, 
     Clock, 
     Tag, 
     AlertCircle, 
     HeartHandshake,
     ChevronRight,
+    ChevronLeft,
     MapPin,
     Copy,
-    Check
+    Check,
+    Gift,
+    Flame,
+    Plus,
+    Minus,
+    Trash2,
+    Eye,
+    Printer,
+    Share2,
+    User,
+    Lock,
+    X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
@@ -29,8 +40,12 @@ import Footer from '../components/Footer';
 import { cn } from '../lib/utils';
 import { jsPDF } from 'jspdf';
 import confetti from 'canvas-confetti';
+import { COOKIES } from '../data/cookies';
+import { sendOrderConfirmationEmail } from '../services/emailService';
 
-// Generate Branded PDF Invoice
+// ============================================================================
+// PDF INVOICE GENERATOR (HAUTE ARTISANAL PATISSERIE)
+// ============================================================================
 const generateInvoicePDF = (orderData) => {
     try {
         const doc = new jsPDF({
@@ -40,73 +55,86 @@ const generateInvoicePDF = (orderData) => {
 
         // Brand Banner Header
         doc.setFillColor(26, 17, 14); // #1a110e
-        doc.rect(0, 0, 210, 42, 'F');
+        doc.rect(0, 0, 210, 44, 'F');
+
+        // Gold Trim Line
+        doc.setFillColor(212, 140, 69);
+        doc.rect(0, 43, 210, 1.2, 'F');
 
         // Brand Name
         doc.setFont('times', 'bold');
-        doc.setFontSize(22);
+        doc.setFontSize(24);
         doc.setTextColor(245, 230, 211); // cream #f5e6d3
         doc.text('CORAL COOKIES', 18, 20);
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
         doc.setTextColor(212, 140, 69); // caramel #d48c45
-        doc.text('HAUTE ARTISANAL PATISSERIE', 18, 26);
-        doc.setTextColor(200, 200, 200);
-        doc.text('contact@coralcookies.com | www.coralcookies.com', 18, 32);
+        doc.text('HAUTE ARTISANAL PATISSERIE & HEARTH BAKEHOUSE', 18, 26);
+        doc.setTextColor(190, 185, 180);
+        doc.text('concierge@coralcookies.com | www.coralcookies.com | +1 (800) 555-BAKE', 18, 33);
 
         // Invoice Header Information
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(16);
         doc.setTextColor(255, 255, 255);
-        doc.text('OFFICIAL INVOICE', 192, 18, { align: 'right' });
+        doc.text('CERTIFIED INVOICE', 192, 18, { align: 'right' });
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
         doc.setTextColor(212, 140, 69);
-        doc.text(`Invoice No: ${orderData.orderId}`, 192, 25, { align: 'right' });
-        doc.text(`Date: ${orderData.date}`, 192, 30, { align: 'right' });
+        doc.text(`Reference: ${orderData.orderId}`, 192, 25, { align: 'right' });
         doc.setTextColor(220, 220, 220);
-        doc.text(`Payment: ${orderData.paymentMethod}`, 192, 35, { align: 'right' });
+        doc.text(`Date: ${orderData.date}`, 192, 30, { align: 'right' });
+        doc.text(`Method: ${orderData.paymentMethod}`, 192, 35, { align: 'right' });
 
         // Bill To & Delivery Address Section
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
         doc.setTextColor(43, 27, 23);
-        doc.text('CUSTOMER DETAILS:', 18, 52);
-        doc.text('DELIVERY ADDRESS:', 110, 52);
+        doc.text('CLIENT DETAILS', 18, 54);
+        doc.text('DISPATCH DESTINATION', 110, 54);
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(70, 70, 70);
-        doc.text(orderData.customer.name, 18, 58);
-        doc.text(orderData.customer.email, 18, 63);
-        doc.text(orderData.customer.phone || 'Phone not provided', 18, 68);
+        doc.text(orderData.customer.name, 18, 60);
+        doc.text(orderData.customer.email, 18, 65);
+        doc.text(orderData.customer.phone || 'Phone on file with courier', 18, 70);
 
-        doc.text(orderData.customer.address, 110, 58);
-        doc.text(`${orderData.customer.city}, ${orderData.customer.state} ${orderData.customer.zip}`, 110, 63);
-        doc.text(orderData.customer.country || 'United States', 110, 68);
+        doc.text(orderData.customer.address, 110, 60);
+        doc.text(`${orderData.customer.city}, ${orderData.customer.state} ${orderData.customer.zip}`, 110, 65);
+        doc.text(`${orderData.customer.country || 'United States'} • Delivery: ${orderData.deliveryMethodLabel}`, 110, 70);
+
+        if (orderData.giftNote) {
+            doc.setFillColor(253, 250, 245);
+            doc.roundedRect(18, 76, 174, 10, 2, 2, 'F');
+            doc.setFont('times', 'italic');
+            doc.setFontSize(8.5);
+            doc.setTextColor(150, 95, 45);
+            doc.text(`Enclosed Gift Note: "${orderData.giftNote.substring(0, 95)}${orderData.giftNote.length > 95 ? '...' : ''}"`, 22, 82.5);
+        }
 
         // Divider
         doc.setDrawColor(220, 220, 220);
         doc.setLineWidth(0.3);
-        doc.line(18, 76, 192, 76);
+        doc.line(18, 90, 192, 90);
 
         // Items Table Header
-        doc.setFillColor(248, 244, 238);
-        doc.rect(18, 81, 174, 8, 'F');
+        doc.setFillColor(246, 240, 232);
+        doc.rect(18, 94, 174, 8, 'F');
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.5);
         doc.setTextColor(43, 27, 23);
-        doc.text('COOKIE FLAVOR', 22, 86.5);
-        doc.text('CATEGORY', 95, 86.5);
-        doc.text('QTY', 135, 86.5, { align: 'center' });
-        doc.text('PRICE', 160, 86.5, { align: 'right' });
-        doc.text('TOTAL', 188, 86.5, { align: 'right' });
+        doc.text('ARTISANAL SELECTION', 22, 99.5);
+        doc.text('COLLECTION', 95, 99.5);
+        doc.text('QTY', 135, 99.5, { align: 'center' });
+        doc.text('UNIT PRICE', 160, 99.5, { align: 'right' });
+        doc.text('AMOUNT', 188, 99.5, { align: 'right' });
 
         // Itemized Rows
-        let y = 95;
+        let y = 108;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
 
@@ -117,8 +145,8 @@ const generateInvoicePDF = (orderData) => {
             }
             doc.setTextColor(40, 40, 40);
             doc.text(item.name, 22, y);
-            doc.setTextColor(120, 120, 120);
-            doc.text(item.category || 'Artisanal', 95, y);
+            doc.setTextColor(130, 120, 115);
+            doc.text(item.category || 'Hearth Baked', 95, y);
             doc.setTextColor(40, 40, 40);
             doc.text(String(item.quantity), 135, y, { align: 'center' });
             doc.text(`$${item.price.toFixed(2)}`, 160, y, { align: 'right' });
@@ -145,14 +173,14 @@ const generateInvoicePDF = (orderData) => {
         if (orderData.discount > 0) {
             printSummaryLine(`Promo Discount (${orderData.promoCode}):`, `-$${orderData.discount.toFixed(2)}`);
         }
-        printSummaryLine('Shipping & Packaging:', orderData.shipping === 0 ? 'FREE' : `$${orderData.shipping.toFixed(2)}`);
-        printSummaryLine('Estimated Tax (5%):', `$${orderData.tax.toFixed(2)}`);
+        printSummaryLine('Shipping & Packaging:', orderData.shipping === 0 ? 'COMPLIMENTARY' : `$${orderData.shipping.toFixed(2)}`);
+        printSummaryLine('Patisserie Sales Tax (5%):', `$${orderData.tax.toFixed(2)}`);
 
         doc.setDrawColor(212, 140, 69);
         doc.setLineWidth(0.6);
         doc.line(120, y - 1.5, 192, y - 1.5);
         y += 3;
-        printSummaryLine('GRAND TOTAL:', `$${orderData.total.toFixed(2)}`, true);
+        printSummaryLine('TOTAL PAID:', `$${orderData.total.toFixed(2)}`, true);
 
         // Footer Notice & Authenticity Guarantee
         doc.setDrawColor(230, 230, 230);
@@ -167,8 +195,8 @@ const generateInvoicePDF = (orderData) => {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
         doc.setTextColor(140, 140, 140);
-        doc.text('Thank you for savoring with Coral Cookies! Questions? Email orders@coralcookies.com', 105, 271, { align: 'center' });
-        doc.text(`Order Reference: ${orderData.orderId} • Certified Patisserie Bill & Digital Tax Invoice`, 105, 276, { align: 'center' });
+        doc.text('Thank you for savoring Coral Cookies. Certified Digital Receipt & Official Tax Invoice.', 105, 271, { align: 'center' });
+        doc.text(`Official Order Authenticator: ${orderData.orderId} • Questions? orders@coralcookies.com`, 105, 276, { align: 'center' });
 
         doc.save(`CoralCookies-Invoice-${orderData.orderId}.pdf`);
     } catch (err) {
@@ -176,10 +204,108 @@ const generateInvoicePDF = (orderData) => {
     }
 };
 
+// ============================================================================
+// LUXURY 3D INTERACTIVE CREDIT CARD VISUALIZER
+// ============================================================================
+const LuxuryCardPreview = ({ cardNumber, cardExp, cardCvc, cardName, isCvcFocused }) => {
+    // Detect card brand
+    const cleanNumber = cardNumber.replace(/\s/g, '');
+    let brand = 'Coral Black';
+    let brandLogo = 'CORAL';
+    if (cleanNumber.startsWith('4')) {
+        brand = 'Visa Infinite';
+        brandLogo = 'VISA';
+    } else if (cleanNumber.startsWith('5')) {
+        brand = 'Mastercard World';
+        brandLogo = 'MASTERCARD';
+    } else if (cleanNumber.startsWith('3')) {
+        brand = 'Amex Centurion';
+        brandLogo = 'AMEX';
+    }
+
+    return (
+        <div className="relative w-full max-w-sm mx-auto h-52 sm:h-56 rounded-3xl p-6 text-cream shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden transition-all duration-500 border border-amber-400/30 select-none group perspective-1000">
+            {/* Background Luxury Hologram Mesh */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#160d0a] via-[#2c1b16] to-[#120b08] z-0" />
+            <div className="absolute -top-12 -right-12 w-48 h-48 bg-radial from-caramel/30 via-cookie/10 to-transparent blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-10 -left-10 w-44 h-44 bg-radial from-accent/20 via-transparent to-transparent blur-xl pointer-events-none" />
+            
+            {/* Micro gold wave lines */}
+            <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#d48c45_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+
+            <div className="relative z-10 h-full flex flex-col justify-between">
+                {/* Card Top: Brand & Chip */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        {/* Metallic EMV Chip */}
+                        <div className="w-10 h-8 rounded-lg bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 border border-amber-100/50 p-1 flex flex-col justify-between shadow-sm">
+                            <div className="h-0.5 bg-amber-800/40 rounded-full" />
+                            <div className="h-0.5 bg-amber-800/40 rounded-full" />
+                            <div className="h-0.5 bg-amber-800/40 rounded-full" />
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <span className="font-serif font-black tracking-widest text-sm bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-cream to-caramel">
+                            {brandLogo}
+                        </span>
+                        <span className="block text-[9px] uppercase tracking-widest text-amber-200/60 font-mono">
+                            {brand}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Card Middle: 16-Digit Number */}
+                <div className="py-2">
+                    <p className="font-mono text-lg sm:text-xl tracking-[0.22em] text-cream drop-shadow-md">
+                        {cardNumber || '•••• •••• •••• ••••'}
+                    </p>
+                </div>
+
+                {/* Card Bottom: Holder Name, Expiry, CVV Glow */}
+                <div className="flex items-end justify-between text-xs pt-1 border-t border-white/10">
+                    <div>
+                        <span className="text-[9px] uppercase tracking-widest text-cream/50 block font-semibold">Cardholder</span>
+                        <span className="font-serif font-semibold tracking-wider text-cream uppercase text-xs sm:text-sm drop-shadow">
+                            {cardName.trim() ? cardName : 'YOUR NAME'}
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <div>
+                            <span className="text-[9px] uppercase tracking-widest text-cream/50 block font-semibold">Expires</span>
+                            <span className="font-mono text-cream font-semibold text-xs sm:text-sm">
+                                {cardExp ? cardExp : 'MM/YY'}
+                            </span>
+                        </div>
+
+                        <div className={cn(
+                            "px-2 py-0.5 rounded-lg border transition-all duration-300 text-center",
+                            isCvcFocused 
+                                ? "bg-amber-400/20 border-amber-400 text-amber-200 ring-2 ring-amber-400/30 scale-105" 
+                                : "bg-black/20 border-white/10 text-cream/70"
+                        )}>
+                            <span className="text-[8px] uppercase tracking-wider block text-white/50">CVC</span>
+                            <span className="font-mono text-xs font-bold">
+                                {cardCvc ? cardCvc : '•••'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ============================================================================
+// MAIN COMPONENT: NEXT-LEVEL CHECKOUT
+// ============================================================================
 export default function Checkout() {
-    const { cart, cartTotal, clearCart, updateQuantity, removeFromCart } = useCart();
+    const { cart, cartTotal, clearCart, updateQuantity, removeFromCart, addToCart } = useCart();
     const { switchPage } = usePageTransition();
     const navigate = useNavigate();
+
+    // Multi-step Checkout navigation: 1: Delivery & Contact, 2: Experience & Packaging, 3: Payment
+    const [currentStep, setCurrentStep] = useState(1);
 
     // Form fields
     const [formData, setFormData] = useState({
@@ -190,17 +316,20 @@ export default function Checkout() {
         address: '',
         apartment: '',
         city: '',
-        state: '',
+        state: 'CA',
         zip: '',
-        deliveryMethod: 'standard', // 'standard' | 'express' | 'pickup'
-        paymentMethod: 'card', // 'card' | 'applepay' | 'cod'
+        deliveryMethod: 'standard', // 'standard' | 'express' | 'luxury_concierge'
+        bakeTimeSlot: 'afternoon', // 'immediate' | 'afternoon' | 'evening' | 'tomorrow'
+        paymentMethod: 'card', // 'card' | 'cod'
         cardNumber: '',
         cardExp: '',
         cardCvc: '',
         cardName: '',
         giftNote: '',
+        isGift: false,
     });
 
+    const [isCvcFocused, setIsCvcFocused] = useState(false);
     const [errors, setErrors] = useState({});
     const [promoCode, setPromoCode] = useState('');
     const [appliedDiscount, setAppliedDiscount] = useState(0);
@@ -210,65 +339,135 @@ export default function Checkout() {
     const [completedOrder, setCompletedOrder] = useState(null);
     const [showEmailModal, setShowEmailModal] = useState(false);
     const [copiedEmail, setCopiedEmail] = useState(false);
+    const [deliveryEtaCounter, setDeliveryEtaCounter] = useState(38); // live countdown in minutes
+    const [emailSendStatus, setEmailSendStatus] = useState({ sending: false, success: false, error: null, timestamp: null });
 
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, []);
+    }, [currentStep]);
+
+    // Recommended items from catalogue not currently in cart
+    const suggestedCookies = useMemo(() => {
+        const cartIds = new Set(cart.map(item => item.id));
+        return COOKIES.filter(c => !cartIds.has(c.id)).slice(0, 2);
+    }, [cart]);
 
     // Delivery fee calculation
-    const shippingFee = formData.deliveryMethod === 'express' ? 4.99 : 0;
+    const shippingFee = useMemo(() => {
+        if (formData.deliveryMethod === 'express') return 4.99;
+        if (formData.deliveryMethod === 'luxury_concierge') return 7.99;
+        return 0; // Standard is complimentary
+    }, [formData.deliveryMethod]);
+
+    const deliveryMethodLabel = useMemo(() => {
+        if (formData.deliveryMethod === 'express') return 'Warm Oven Express Courier (45-60 mins)';
+        if (formData.deliveryMethod === 'luxury_concierge') return 'Artisanal Velvet Box Concierge Delivery';
+        return 'Standard Heritage Insulated Box Dispatch (Complimentary)';
+    }, [formData.deliveryMethod]);
+
     const discountAmount = appliedDiscount > 0 ? (cartTotal * appliedDiscount) : 0;
-    const taxAmount = (cartTotal - discountAmount) * 0.05;
+    const taxAmount = Math.max(0, (cartTotal - discountAmount) * 0.05);
     const finalTotal = Math.max(0, cartTotal - discountAmount + shippingFee + taxAmount);
 
-    const handleApplyPromo = () => {
+    // Free shipping threshold logic ($40 gets free luxury packaging upgrade)
+    const luxuryPackagingThreshold = 40;
+    const remainingForPerk = Math.max(0, luxuryPackagingThreshold - cartTotal);
+
+    // Promo code handler
+    const handleApplyPromo = (codeToApply) => {
+        const code = (codeToApply || promoCode).trim().toUpperCase();
         setPromoError('');
         setPromoSuccess('');
-        const code = promoCode.trim().toUpperCase();
+        
         if (code === 'CORAL10' || code === 'SWEET10') {
             setAppliedDiscount(0.10);
-            setPromoSuccess('10% off Sweet Confection Discount applied!');
+            setPromoCode(code);
+            setPromoSuccess('10% Confectioners Treat Discount applied!');
         } else if (code === 'VIP20') {
             setAppliedDiscount(0.20);
-            setPromoSuccess('20% VIP Gourmet Discount applied!');
+            setPromoCode(code);
+            setPromoSuccess('20% Haute VIP Gourmet Patron applied!');
+        } else if (code === 'FREESHIP') {
+            setAppliedDiscount(0.05);
+            setPromoCode(code);
+            setPromoSuccess('Free Express Upgrade & 5% Courtesy applied!');
         } else if (!code) {
             setPromoError('Please enter a promo code');
         } else {
-            setPromoError('Invalid promo code. Try "CORAL10"');
+            setPromoError('Invalid promotional code');
         }
     };
 
-    const validateForm = () => {
+
+    // Card formatters
+    const handleCardNumberChange = (e) => {
+        let val = e.target.value.replace(/\D/g, '').substring(0, 16);
+        val = val.replace(/(.{4})/g, '$1 ').trim();
+        setFormData({ ...formData, cardNumber: val });
+    };
+
+    const handleCardExpChange = (e) => {
+        let val = e.target.value.replace(/\D/g, '').substring(0, 4);
+        if (val.length >= 2) {
+            val = `${val.substring(0, 2)}/${val.substring(2)}`;
+        }
+        setFormData({ ...formData, cardExp: val });
+    };
+
+    // Step-by-step validation
+    const validateStep1 = () => {
         const newErrors = {};
         if (!formData.firstName.trim()) newErrors.firstName = 'First name required';
         if (!formData.lastName.trim()) newErrors.lastName = 'Last name required';
-        if (!formData.email.trim() || !formData.email.includes('@')) newErrors.email = 'Valid email required';
+        if (!formData.email.trim() || !formData.email.includes('@')) newErrors.email = 'Valid email required for confirmation & invoice';
         if (!formData.address.trim()) newErrors.address = 'Delivery address required';
         if (!formData.city.trim()) newErrors.city = 'City required';
         if (!formData.zip.trim()) newErrors.zip = 'ZIP code required';
-
-        if (formData.paymentMethod === 'card') {
-            if (!formData.cardNumber.trim() || formData.cardNumber.replace(/\s/g, '').length < 15) {
-                newErrors.cardNumber = 'Valid 16-digit card required';
-            }
-            if (!formData.cardExp.trim()) newErrors.cardExp = 'MM/YY required';
-            if (!formData.cardCvc.trim() || formData.cardCvc.length < 3) newErrors.cardCvc = 'CVC required';
-        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmitOrder = async (e) => {
-        e.preventDefault();
-        if (!validateForm()) {
-            window.scrollTo({ top: 200, behavior: 'smooth' });
+    const validateStep3 = () => {
+        const newErrors = {};
+        if (formData.paymentMethod === 'card') {
+            if (!formData.cardNumber.trim() || formData.cardNumber.replace(/\s/g, '').length < 15) {
+                newErrors.cardNumber = 'Valid 15-16 digit card number required';
+            }
+            if (!formData.cardExp.trim() || formData.cardExp.length < 5) {
+                newErrors.cardExp = 'Valid MM/YY required';
+            }
+            if (!formData.cardCvc.trim() || formData.cardCvc.length < 3) {
+                newErrors.cardCvc = '3 or 4-digit security CVC required';
+            }
+        }
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleNextStep = () => {
+        if (currentStep === 1) {
+            if (validateStep1()) {
+                setCurrentStep(2);
+            }
+        } else if (currentStep === 2) {
+            setCurrentStep(3);
+        }
+    };
+
+    const handleFinalSubmit = (e) => {
+        if (e) e.preventDefault();
+
+        if (!validateStep3()) {
             return;
         }
 
+        executeOrderCreation();
+    };
+
+    const executeOrderCreation = () => {
         setIsSubmitting(true);
 
-        // Simulate baking/payment authorization latency
         setTimeout(() => {
             const orderId = `CR-${Math.floor(100000 + Math.random() * 900000)}`;
             const dateStr = new Date().toLocaleDateString('en-US', {
@@ -279,6 +478,9 @@ export default function Checkout() {
                 minute: '2-digit'
             });
 
+            let displayPayment = 'Card ending in •••• ' + (formData.cardNumber ? formData.cardNumber.slice(-4) : '4242');
+            if (formData.paymentMethod === 'cod') displayPayment = 'Cash on Oven Delivery';
+
             const orderDetails = {
                 orderId,
                 date: dateStr,
@@ -287,17 +489,20 @@ export default function Checkout() {
                 discount: discountAmount,
                 promoCode: appliedDiscount > 0 ? (promoCode || 'PROMO') : null,
                 shipping: shippingFee,
+                deliveryMethodLabel,
+                bakeTimeSlot: formData.bakeTimeSlot,
                 tax: taxAmount,
                 total: finalTotal,
-                paymentMethod: formData.paymentMethod === 'card' ? 'Credit Card (**** 4242)' : (formData.paymentMethod === 'applepay' ? 'Apple Pay' : 'Cash on Delivery'),
+                paymentMethod: displayPayment,
+                giftNote: formData.isGift ? formData.giftNote : null,
                 customer: {
-                    name: `${formData.firstName} ${formData.lastName}`,
-                    email: formData.email,
-                    phone: formData.phone,
-                    address: `${formData.address}${formData.apartment ? ', ' + formData.apartment : ''}`,
-                    city: formData.city,
+                    name: `${formData.firstName || 'Eleanor'} ${formData.lastName || 'Vance'}`,
+                    email: formData.email || 'customer@coralcookies.com',
+                    phone: formData.phone || '+1 (555) 019-2834',
+                    address: `${formData.address || '742 Evergreen Terrace'}${formData.apartment ? ', ' + formData.apartment : ''}`,
+                    city: formData.city || 'San Francisco',
                     state: formData.state || 'CA',
-                    zip: formData.zip,
+                    zip: formData.zip || '94107',
                     country: 'United States',
                 }
             };
@@ -305,95 +510,252 @@ export default function Checkout() {
             setCompletedOrder(orderDetails);
             setIsSubmitting(false);
 
-            // Trigger celebration confetti
+            // Real-Time Email Dispatch to Customer Inbox
+            handleSendLiveEmail(orderDetails);
+
+            // Celebration Confetti Explosion
             confetti({
-                particleCount: 120,
-                spread: 70,
+                particleCount: 140,
+                spread: 80,
                 origin: { y: 0.6 },
-                colors: ['#d48c45', '#f5e6d3', '#ffffff', '#2b1b17']
+                colors: ['#d48c45', '#f5e6d3', '#ffffff', '#FF7F50', '#2b1b17']
             });
 
-            // Auto-generate & download PDF Invoice
+            // Second wave
+            setTimeout(() => {
+                confetti({
+                    particleCount: 60,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: ['#d48c45', '#f5e6d3']
+                });
+                confetti({
+                    particleCount: 60,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: ['#d48c45', '#f5e6d3']
+                });
+            }, 300);
+
+            // Auto-generate PDF Invoice
             setTimeout(() => {
                 generateInvoicePDF(orderDetails);
-            }, 800);
+            }, 900);
 
-            // Empty the cart
+            // Clear the user's cart
             clearCart();
-        }, 1800);
+        }, 1600);
     };
 
-    // Format card number with spaces
-    const handleCardNumberChange = (e) => {
-        let val = e.target.value.replace(/\D/g, '').substring(0, 16);
-        val = val.replace(/(.{4})/g, '$1 ').trim();
-        setFormData({ ...formData, cardNumber: val });
-    };
-
-    // Format card expiration
-    const handleCardExpChange = (e) => {
-        let val = e.target.value.replace(/\D/g, '').substring(0, 4);
-        if (val.length >= 2) {
-            val = `${val.substring(0, 2)}/${val.substring(2)}`;
+    const handleSendLiveEmail = async (orderInfo) => {
+        if (!orderInfo || !orderInfo.customer || !orderInfo.customer.email) return;
+        setEmailSendStatus({ sending: true, success: false, error: null, timestamp: null });
+        try {
+            const res = await sendOrderConfirmationEmail(orderInfo);
+            if (res.success) {
+                setEmailSendStatus({
+                    sending: false,
+                    success: true,
+                    error: null,
+                    timestamp: res.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    provider: res.provider
+                });
+            } else {
+                setEmailSendStatus({
+                    sending: false,
+                    success: false,
+                    error: res.error || 'Could not deliver email',
+                    timestamp: null
+                });
+            }
+        } catch (e) {
+            setEmailSendStatus({
+                sending: false,
+                success: false,
+                error: e.message || 'Delivery error',
+                timestamp: null
+            });
         }
-        setFormData({ ...formData, cardExp: val });
     };
 
-    // ==============================================================
-    // ORDER CONFIRMATION SCREEN
-    // ==============================================================
+    // ========================================================================
+    // ORDER CONFIRMATION & LIVE BAKE TRACKER SCREEN
+    // ========================================================================
     if (completedOrder) {
         return (
-            <div className="min-h-screen bg-chocolate text-cream pt-32 pb-24 px-4 sm:px-6 lg:px-8 flex flex-col selection:bg-caramel selection:text-chocolate">
-                <div className="max-w-3xl mx-auto w-full flex-1">
-                    {/* Success Header Card */}
+            <div className="min-h-screen bg-chocolate text-cream pt-28 pb-24 px-4 sm:px-6 lg:px-8 flex flex-col selection:bg-caramel selection:text-chocolate">
+                <div className="max-w-4xl mx-auto w-full flex-1">
+                    {/* Hero Confirmed Badge Card */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="rounded-3xl bg-gradient-to-b from-[#241713] to-[#1a110e] border border-caramel/40 p-6 sm:p-10 shadow-2xl relative overflow-hidden text-center mb-8"
+                        transition={{ duration: 0.6 }}
+                        className="rounded-3xl bg-gradient-to-b from-[#251713] via-[#1d120f] to-[#140b08] border border-amber-500/30 p-6 sm:p-10 shadow-[0_25px_60px_rgba(0,0,0,0.8)] relative overflow-hidden text-center mb-8"
                     >
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-caramel/10 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute top-0 right-0 w-80 h-80 bg-caramel/15 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
                         
-                        <div className="w-20 h-20 mx-auto rounded-full bg-caramel/20 border-2 border-caramel flex items-center justify-center text-caramel mb-6 shadow-lg shadow-caramel/20">
-                            <CheckCircle2 size={42} className="animate-bounce" />
+                        {/* Animated Baking Badge Icon */}
+                        <div className="relative w-24 h-24 mx-auto mb-6">
+                            <div className="absolute inset-0 rounded-full bg-caramel/20 animate-ping opacity-30" />
+                            <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-caramel via-[#b37032] to-[#452718] border-2 border-amber-300/60 flex items-center justify-center text-cream shadow-2xl shadow-caramel/30">
+                                <Flame size={44} className="text-amber-200 animate-pulse" />
+                            </div>
                         </div>
 
-                        <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-caramel/15 border border-caramel/30 text-caramel text-xs font-semibold uppercase tracking-wider mb-3">
-                            <Sparkles size={13} /> Order Confirmed & In Oven
+                        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-caramel/20 border border-caramel/40 text-caramel text-xs font-bold uppercase tracking-widest mb-4">
+                            <Sparkles size={14} /> Artisanal Order Confirmed & Baking
                         </span>
 
                         <h1 className="text-3xl sm:text-5xl font-serif font-bold text-cream mb-3">
-                            Thank You, {completedOrder.customer.name.split(' ')[0]}!
+                            Magnifique, {completedOrder.customer.name.split(' ')[0]}!
                         </h1>
-                        <p className="text-cream/70 text-sm sm:text-base max-w-lg mx-auto mb-6 leading-relaxed">
-                            Your artisanal cookies are now queued for our next fresh batch bake. An official confirmation email and invoice have been dispatched to:
+                        <p className="text-cream/70 text-sm sm:text-base max-w-xl mx-auto mb-6 leading-relaxed">
+                            Your small-batch cookies have entered our hearth ovens. An official tax invoice and confirmation package have been dispatched to:
                         </p>
 
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-caramel font-semibold text-sm mb-6">
-                            <Mail size={16} />
-                            <span>{completedOrder.customer.email}</span>
+                        {/* Real-Time Email Dispatch Status Live Card */}
+                        <div className="my-6 max-w-lg mx-auto">
+                            {emailSendStatus.sending ? (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="flex items-center justify-center gap-3 px-5 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs sm:text-sm shadow-md"
+                                >
+                                    <div className="w-4 h-4 border-2 border-caramel border-t-transparent rounded-full animate-spin shrink-0" />
+                                    <span>Dispatching confirmation receipt to <strong className="text-white">{completedOrder.customer.email}</strong> in real time...</span>
+                                </motion.div>
+                            ) : emailSendStatus.success ? (
+                                <motion.div 
+                                    initial={{ scale: 0.95, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm text-left flex items-start justify-between gap-3 shadow-lg shadow-emerald-500/5"
+                                >
+                                    <div className="flex items-start gap-2.5">
+                                        <CheckCircle2 size={18} className="text-emerald-400 shrink-0 mt-0.5" />
+                                        <div>
+                                            <span className="font-bold text-white block">Real-Time Email Dispatched!</span>
+                                            <span className="text-white/70 text-xs">Official tax receipt & order summary delivered to <strong className="text-emerald-200">{completedOrder.customer.email}</strong> at {emailSendStatus.timestamp}.</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSendLiveEmail(completedOrder)}
+                                        className="shrink-0 px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 text-[11px] font-semibold transition-colors cursor-pointer"
+                                        title="Send another copy to this email"
+                                    >
+                                        Resend
+                                    </button>
+                                </motion.div>
+                            ) : (
+                                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs text-white/70 flex items-center justify-between gap-2">
+                                    <span className="flex items-center gap-2">
+                                        <Mail size={16} className="text-caramel" />
+                                        <span>Sent to <strong className="text-white">{completedOrder.customer.email}</strong></span>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSendLiveEmail(completedOrder)}
+                                        className="px-2.5 py-1 rounded-lg bg-caramel/20 hover:bg-caramel text-caramel hover:text-chocolate font-bold text-[11px] transition-colors cursor-pointer"
+                                    >
+                                        Retry Send
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Action Buttons: Download PDF and View Email */}
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                        {/* Interactive CTAs */}
+                        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                             <button
                                 type="button"
                                 onClick={() => generateInvoicePDF(completedOrder)}
-                                className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-gradient-to-r from-cookie to-caramel text-chocolate font-bold text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-lg shadow-caramel/25 cursor-pointer active:scale-95"
+                                className="px-6 py-3.5 rounded-full bg-gradient-to-r from-cookie via-caramel to-[#bf7733] text-chocolate font-bold text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-lg shadow-caramel/25 cursor-pointer active:scale-95"
                             >
                                 <Download size={16} />
-                                <span>Download Invoice Bill (PDF)</span>
+                                <span>Download Official PDF Invoice</span>
                             </button>
 
                             <button
                                 type="button"
                                 onClick={() => setShowEmailModal(true)}
-                                className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/15 text-cream font-semibold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+                                className="px-6 py-3.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/15 text-cream font-semibold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
                             >
                                 <Mail size={16} className="text-caramel" />
-                                <span>Preview Sent Email Receipt</span>
+                                <span>Preview Email Dispatch</span>
                             </button>
+
+                            <button
+                                type="button"
+                                onClick={() => window.print()}
+                                className="px-4 py-3.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-cream/70 hover:text-white transition-all cursor-pointer"
+                                title="Print Receipt"
+                            >
+                                <Printer size={16} />
+                            </button>
+                        </div>
+                    </motion.div>
+
+                    {/* LIVE HEARTH-TO-DOORSTEP TRACKER */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                        className="rounded-3xl bg-gradient-to-br from-[#211411] to-[#170d0b] border border-amber-500/25 p-6 sm:p-8 backdrop-blur-md mb-8 shadow-xl"
+                    >
+                        <div className="flex items-center justify-between pb-6 border-b border-white/10">
+                            <div>
+                                <span className="text-xs text-caramel uppercase tracking-widest font-bold block mb-1">Live Hearth Status</span>
+                                <h3 className="text-xl font-serif font-bold text-cream">Fresh Oven Dispatch Station</h3>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-xs text-white/50 block">Estimated Arrival</span>
+                                <span className="font-mono font-bold text-caramel text-base flex items-center gap-1.5 justify-end">
+                                    <Clock size={16} /> Today, in ~{deliveryEtaCounter} minutes
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Interactive Step Progress Milestones */}
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-6">
+                            <div className="p-4 rounded-2xl bg-caramel/10 border border-caramel/30 relative">
+                                <div className="w-7 h-7 rounded-full bg-caramel text-chocolate font-bold flex items-center justify-center text-xs mb-2">
+                                    <Check size={14} className="stroke-[3]" />
+                                </div>
+                                <h4 className="font-bold text-sm text-cream">1. Small-Batch Prep</h4>
+                                <p className="text-xs text-white/50 mt-1">Dough crafted with 74% single-origin cacao.</p>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 relative overflow-hidden">
+                                <div className="absolute top-2 right-2">
+                                    <span className="relative flex h-2.5 w-2.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                                    </span>
+                                </div>
+                                <div className="w-7 h-7 rounded-full bg-amber-500 text-chocolate font-bold flex items-center justify-center text-xs mb-2 animate-pulse">
+                                    <Flame size={14} />
+                                </div>
+                                <h4 className="font-bold text-sm text-amber-200">2. Hearth Bake 185°C</h4>
+                                <p className="text-xs text-white/60 mt-1">Active now: Golden crust caramelization.</p>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5">
+                                <div className="w-7 h-7 rounded-full bg-white/10 text-white/40 font-bold flex items-center justify-center text-xs mb-2">
+                                    3
+                                </div>
+                                <h4 className="font-bold text-sm text-white/60">3. Insulated Packaging</h4>
+                                <p className="text-xs text-white/30 mt-1">Sealed in gold insulated aroma chambers.</p>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5">
+                                <div className="w-7 h-7 rounded-full bg-white/10 text-white/40 font-bold flex items-center justify-center text-xs mb-2">
+                                    4
+                                </div>
+                                <h4 className="font-bold text-sm text-white/60">4. Courier Delivery</h4>
+                                <p className="text-xs text-white/30 mt-1">Warm handoff straight to your doorstep.</p>
+                            </div>
                         </div>
                     </motion.div>
 
@@ -401,43 +763,54 @@ export default function Checkout() {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.2 }}
+                        transition={{ duration: 0.5, delay: 0.3 }}
                         className="rounded-3xl bg-white/[0.03] border border-white/10 p-6 sm:p-8 backdrop-blur-md mb-8"
                     >
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-white/10 gap-3">
                             <div>
-                                <span className="text-xs text-cream/40 uppercase tracking-widest block font-bold">Order Number</span>
-                                <span className="text-xl font-mono font-bold text-caramel">{completedOrder.orderId}</span>
+                                <span className="text-xs text-cream/40 uppercase tracking-widest block font-bold">Patisserie Order No.</span>
+                                <span className="text-2xl font-mono font-bold text-caramel">{completedOrder.orderId}</span>
                             </div>
                             <div className="sm:text-right">
-                                <span className="text-xs text-cream/40 uppercase tracking-widest block font-bold">Estimated Delivery</span>
+                                <span className="text-xs text-cream/40 uppercase tracking-widest block font-bold">Payment Method</span>
                                 <span className="text-sm font-semibold text-cream flex items-center gap-1.5 sm:justify-end">
-                                    <Clock size={14} className="text-caramel" />
-                                    <span>Today, within 2 - 3 hours (Warm)</span>
+                                    <ShieldCheck size={16} className="text-caramel" />
+                                    <span>{completedOrder.paymentMethod}</span>
                                 </span>
                             </div>
                         </div>
 
                         {/* Items list */}
                         <div className="py-6 space-y-4 border-b border-white/10">
-                            <h4 className="text-xs uppercase tracking-widest text-caramel font-bold">Ordered Cookies</h4>
+                            <h4 className="text-xs uppercase tracking-widest text-caramel font-bold">Artisanal Cookies in this Batch</h4>
                             {completedOrder.items.map((item) => (
-                                <div key={item.id} className="flex items-center justify-between gap-4">
+                                <div key={item.id} className="flex items-center justify-between gap-4 p-3 rounded-2xl bg-white/[0.02]">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 bg-white/5 rounded-xl p-1 shrink-0 flex items-center justify-center border border-white/5">
+                                        <div className="w-14 h-14 bg-white/5 rounded-xl p-1 shrink-0 flex items-center justify-center border border-white/5">
                                             <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
                                         </div>
                                         <div>
-                                            <h5 className="font-serif font-bold text-cream text-sm">{item.name}</h5>
+                                            <h5 className="font-serif font-bold text-cream text-base">{item.name}</h5>
                                             <span className="text-xs text-white/40">Qty: {item.quantity} × ${item.price.toFixed(2)}</span>
                                         </div>
                                     </div>
-                                    <span className="font-serif font-bold text-caramel text-sm">
+                                    <span className="font-serif font-bold text-caramel text-base">
                                         ${(item.price * item.quantity).toFixed(2)}
                                     </span>
                                 </div>
                             ))}
                         </div>
+
+                        {/* Gift Note Display if present */}
+                        {completedOrder.giftNote && (
+                            <div className="my-6 p-4 rounded-2xl bg-[#2b1f1a] border border-amber-500/25 flex items-start gap-3">
+                                <Gift size={20} className="text-caramel shrink-0 mt-0.5" />
+                                <div>
+                                    <span className="text-xs font-bold text-amber-200 uppercase tracking-wider block mb-1">Complimentary Handwritten Gift Note Enclosed:</span>
+                                    <p className="font-serif italic text-cream/90 text-sm">"{completedOrder.giftNote}"</p>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Summary Numbers */}
                         <div className="pt-6 space-y-2 text-xs">
@@ -446,41 +819,41 @@ export default function Checkout() {
                                 <span>${completedOrder.subtotal.toFixed(2)}</span>
                             </div>
                             {completedOrder.discount > 0 && (
-                                <div className="flex justify-between text-caramel">
+                                <div className="flex justify-between text-caramel font-semibold">
                                     <span>Discount ({completedOrder.promoCode})</span>
                                     <span>-${completedOrder.discount.toFixed(2)}</span>
                                 </div>
                             )}
                             <div className="flex justify-between text-cream/60">
-                                <span>Delivery Fee</span>
-                                <span>{completedOrder.shipping === 0 ? 'FREE' : `$${completedOrder.shipping.toFixed(2)}`}</span>
+                                <span>Shipping & Packaging</span>
+                                <span>{completedOrder.shipping === 0 ? 'COMPLIMENTARY' : `$${completedOrder.shipping.toFixed(2)}`}</span>
                             </div>
                             <div className="flex justify-between text-cream/60">
-                                <span>Tax (5%)</span>
+                                <span>Patisserie Tax (5%)</span>
                                 <span>${completedOrder.tax.toFixed(2)}</span>
                             </div>
-                            <div className="flex justify-between items-center pt-3 border-t border-white/10 text-base">
-                                <span className="font-serif font-bold text-cream">Total Paid</span>
-                                <span className="text-2xl font-serif font-bold text-caramel">${completedOrder.total.toFixed(2)}</span>
+                            <div className="flex justify-between items-center pt-4 border-t border-white/10 text-base">
+                                <span className="font-serif font-bold text-cream">Grand Total Paid</span>
+                                <span className="text-3xl font-serif font-bold text-caramel">${completedOrder.total.toFixed(2)}</span>
                             </div>
                         </div>
 
                         {/* Delivery address info */}
                         <div className="mt-6 pt-6 border-t border-white/10 flex items-start gap-3 text-xs text-cream/70">
-                            <MapPin size={16} className="text-caramel shrink-0 mt-0.5" />
+                            <MapPin size={18} className="text-caramel shrink-0 mt-0.5" />
                             <div>
-                                <span className="font-bold text-cream block">Shipping To:</span>
-                                <span>{completedOrder.customer.address}, {completedOrder.customer.city}, {completedOrder.customer.state} {completedOrder.customer.zip}</span>
+                                <span className="font-bold text-cream block text-sm">Dispatching To:</span>
+                                <span className="text-white/80">{completedOrder.customer.address}, {completedOrder.customer.city}, {completedOrder.customer.state} {completedOrder.customer.zip}</span>
                             </div>
                         </div>
                     </motion.div>
 
                     {/* Back to Home CTA */}
-                    <div className="text-center">
+                    <div className="text-center pt-4">
                         <button
                             type="button"
                             onClick={() => switchPage('/shop')}
-                            className="inline-flex items-center gap-2 text-sm text-caramel hover:underline font-semibold cursor-pointer"
+                            className="inline-flex items-center gap-2 text-sm text-caramel hover:text-amber-300 font-semibold cursor-pointer transition-colors"
                         >
                             <ArrowLeft size={16} />
                             <span>Return to Cookies Bakery</span>
@@ -496,42 +869,41 @@ export default function Checkout() {
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                className="bg-[#1f1411] border border-white/10 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto no-scrollbar"
+                                className="bg-[#1e1310] border border-amber-500/30 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto no-scrollbar"
                             >
                                 <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-full bg-caramel/20 flex items-center justify-center text-caramel">
-                                            <Mail size={16} />
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-caramel/20 flex items-center justify-center text-caramel">
+                                            <Mail size={18} />
                                         </div>
                                         <div>
-                                            <h4 className="font-serif font-bold text-cream text-base">Customer Email Dispatched</h4>
-                                            <span className="text-[11px] text-white/40">From: orders@coralcookies.com</span>
+                                            <h4 className="font-serif font-bold text-cream text-base">Customer Dispatch Dispatch</h4>
+                                            <span className="text-xs text-white/40">From: concierge@coralcookies.com</span>
                                         </div>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setShowEmailModal(false)}
-                                        className="text-white/40 hover:text-white p-2 cursor-pointer"
+                                        className="text-white/40 hover:text-white p-2 cursor-pointer rounded-lg"
                                     >
-                                        ✕
+                                        <X size={16} />
                                     </button>
                                 </div>
 
-                                {/* Mock Email Client UI */}
-                                <div className="bg-[#140b08] rounded-2xl p-5 border border-white/5 space-y-4 text-xs font-sans">
+                                <div className="bg-[#120a08] rounded-2xl p-6 border border-white/5 space-y-4 text-xs font-sans">
                                     <div className="space-y-1 pb-3 border-b border-white/10 text-cream/70">
                                         <p><strong className="text-white">To:</strong> {completedOrder.customer.name} &lt;{completedOrder.customer.email}&gt;</p>
-                                        <p><strong className="text-white">Subject:</strong> Order Confirmed! #{completedOrder.orderId} — Coral Cookies Artisanal Receipt</p>
+                                        <p><strong className="text-white">Subject:</strong> Order Confirmed! #{completedOrder.orderId} — Coral Cookies Haute Receipt</p>
                                     </div>
 
                                     <div className="py-2 space-y-3 text-cream/80 leading-relaxed text-sm">
                                         <p>Dear {completedOrder.customer.name.split(' ')[0]},</p>
                                         <p>
-                                            Thank you for choosing Coral Cookies! We have received your order <strong>#{completedOrder.orderId}</strong> and our master bakers have begun preheating the hearth.
+                                            We are delighted to confirm your artisanal order <strong>#{completedOrder.orderId}</strong>. Our pastry master has prepared your ingredients and your cookies are baking at our signature 185°C hearth.
                                         </p>
 
                                         <div className="bg-white/5 p-4 rounded-xl space-y-2 border border-white/5">
-                                            <p className="font-bold text-caramel uppercase text-xs">Summary Breakdown:</p>
+                                            <p className="font-bold text-caramel uppercase text-xs">Selection Breakdown:</p>
                                             {completedOrder.items.map(item => (
                                                 <div key={item.id} className="flex justify-between text-xs">
                                                     <span>{item.quantity}× {item.name}</span>
@@ -539,26 +911,26 @@ export default function Checkout() {
                                                 </div>
                                             ))}
                                             <div className="pt-2 border-t border-white/10 flex justify-between font-bold text-cream">
-                                                <span>Total:</span>
+                                                <span>Total Settled:</span>
                                                 <span className="text-caramel">${completedOrder.total.toFixed(2)}</span>
                                             </div>
                                         </div>
 
                                         <p className="text-xs text-cream/60">
-                                            Your official Tax Invoice Bill PDF has been attached to this email and downloaded automatically.
+                                            Your official Tax Invoice PDF has been generated and is ready for download.
                                         </p>
                                         <p className="font-serif italic text-caramel">
-                                            Warmest regards,<br />
+                                            With warm regards,<br />
                                             The Coral Cookies Patisserie Team
                                         </p>
                                     </div>
 
                                     <div className="pt-3 border-t border-white/10 flex justify-between items-center">
-                                        <span className="text-[10px] text-white/30">Attachment: CoralCookies-Invoice-{completedOrder.orderId}.pdf (48 KB)</span>
+                                        <span className="text-[10px] text-white/30">Attachment: CoralCookies-Invoice-{completedOrder.orderId}.pdf</span>
                                         <button
                                             type="button"
                                             onClick={() => generateInvoicePDF(completedOrder)}
-                                            className="px-3 py-1.5 rounded-lg bg-caramel/20 text-caramel hover:bg-caramel hover:text-chocolate font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                                            className="px-3.5 py-1.5 rounded-lg bg-caramel/20 text-caramel hover:bg-caramel hover:text-chocolate font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                                         >
                                             <Download size={12} />
                                             <span>Download Attachment</span>
@@ -575,486 +947,842 @@ export default function Checkout() {
         );
     }
 
-    // ==============================================================
+    // ========================================================================
     // EMPTY CART STATE
-    // ==============================================================
+    // ========================================================================
     if (cart.length === 0) {
         return (
             <div className="min-h-screen bg-chocolate text-cream pt-40 pb-24 px-4 flex flex-col items-center justify-center text-center">
-                <div className="w-24 h-24 rounded-full bg-caramel/10 border border-caramel/20 flex items-center justify-center text-caramel mb-6 shadow-xl">
+                <motion.div 
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="w-24 h-24 rounded-full bg-caramel/10 border border-caramel/20 flex items-center justify-center text-caramel mb-6 shadow-2xl"
+                >
                     <ShoppingBag size={44} />
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-serif font-bold text-cream mb-3">Your Shopping Bag is Empty</h1>
+                </motion.div>
+                <h1 className="text-3xl sm:text-4xl font-serif font-bold text-cream mb-3">Your Cookie Bag is Empty</h1>
                 <p className="text-cream/60 max-w-md mb-8 text-sm sm:text-base leading-relaxed">
-                    Select a few of our freshly baked small-batch cookies before proceeding to checkout.
+                    Our hearth is warm and cookies are baking fresh. Select a few small-batch cookies from our bakery counter to begin checkout.
                 </p>
                 <button
                     type="button"
                     onClick={() => switchPage('/shop')}
-                    className="px-8 py-4 rounded-full bg-gradient-to-r from-cookie to-caramel text-chocolate font-bold text-base hover:brightness-110 transition-all shadow-xl shadow-caramel/25 cursor-pointer"
+                    className="px-8 py-4 rounded-full bg-gradient-to-r from-cookie via-caramel to-[#bf7733] text-chocolate font-bold text-base hover:brightness-110 transition-all shadow-xl shadow-caramel/25 cursor-pointer active:scale-95"
                 >
-                    Browse Our Cookie Bakery
+                    Explore Cookie Bakery
                 </button>
             </div>
         );
     }
 
-    // ==============================================================
-    // MAIN CHECKOUT FORM & ORDER SUMMARY
-    // ==============================================================
+    // ========================================================================
+    // MAIN CHECKOUT FORM & INTERACTIVE WORKBENCH
+    // ========================================================================
     return (
         <div className="min-h-screen bg-chocolate text-cream flex flex-col selection:bg-caramel selection:text-chocolate">
-            {/* Ambient Background Glow */}
+            {/* Ambient Background Glows */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
                 <div className="absolute top-10 left-1/4 w-[600px] h-[500px] bg-radial from-caramel/15 via-cookie/5 to-transparent blur-3xl opacity-50" />
-                <div className="absolute top-[50%] right-10 w-[500px] h-[500px] bg-radial from-caramel/10 via-transparent to-transparent blur-3xl opacity-40" />
+                <div className="absolute top-[60%] right-10 w-[550px] h-[550px] bg-radial from-accent/10 via-caramel/5 to-transparent blur-3xl opacity-40" />
             </div>
 
             <div className="relative z-10 flex-1 pt-32 md:pt-36 pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-                {/* Navigation Back */}
+                {/* Top Nav */}
                 <div className="mb-8">
                     <button
                         type="button"
                         onClick={() => switchPage('/shop')}
-                        className="inline-flex items-center gap-2 text-xs text-cream/60 hover:text-caramel transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-2 text-xs sm:text-sm text-cream/70 hover:text-caramel transition-colors cursor-pointer group"
                     >
-                        <ArrowLeft size={14} />
-                        <span>Return to Cookies</span>
+                        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                        <span>Return to Cookie Selection</span>
                     </button>
                 </div>
 
-                {/* Page Title & Security Pill */}
-                <div className="flex flex-col sm:flex-row sm:items-end justify-between pb-8 mb-8 border-b border-white/10 gap-4">
-                    <div>
-                        <span className="text-xs uppercase tracking-[0.25em] text-caramel font-bold block mb-1">Secure Ordering</span>
-                        <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-cream">
-                            Artisanal <span className="bg-clip-text text-transparent bg-gradient-to-r from-cream via-cookie to-caramel">Checkout</span>
-                        </h1>
-                    </div>
-                    <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium self-start sm:self-auto">
-                        <ShieldCheck size={16} />
-                        <span>256-bit Encrypted Checkout</span>
+                {/* Page Title */}
+                <div className="pb-8 mb-8 border-b border-white/10">
+                    <span className="text-xs uppercase tracking-[0.25em] text-caramel font-bold block mb-1">HAUTE CONFECTIONERY</span>
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-cream">
+                        Artisanal <span className="bg-clip-text text-transparent bg-gradient-to-r from-cream via-cookie to-caramel">Checkout</span>
+                    </h1>
+                </div>
+
+                {/* STEPPER PROGRESS BAR */}
+                <div className="mb-10">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-2xl">
+                        {[
+                            { step: 1, label: '1. Shipping & Contact' },
+                            { step: 2, label: '2. Delivery & Packaging' },
+                            { step: 3, label: '3. Haute Payment' },
+                        ].map((s) => {
+                            const isActive = currentStep === s.step;
+                            const isCompleted = currentStep > s.step;
+                            return (
+                                <button
+                                    key={s.step}
+                                    type="button"
+                                    onClick={() => {
+                                        // Allow navigating back to completed steps
+                                        if (s.step < currentStep) setCurrentStep(s.step);
+                                    }}
+                                    className={cn(
+                                        "py-3 px-3 rounded-2xl border text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer text-center",
+                                        isActive
+                                            ? "bg-caramel/20 border-caramel text-caramel shadow-lg shadow-caramel/10"
+                                            : isCompleted
+                                            ? "bg-white/5 border-emerald-500/40 text-emerald-400 hover:border-emerald-500"
+                                            : "bg-white/[0.02] border-white/10 text-white/40"
+                                    )}
+                                >
+                                    {isCompleted ? <Check size={14} /> : <span>{s.step}.</span>}
+                                    <span className="hidden sm:inline">{s.label.split('. ')[1]}</span>
+                                    <span className="sm:hidden">Step {s.step}</span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
-                {/* Grid Layout: Form on Left, Sticky Summary on Right */}
-                <form onSubmit={handleSubmitOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-                    {/* LEFT COLUMN: Customer & Payment Details */}
+                {/* MAIN GRID: Steps Flow on Left, Sticky Summary on Right */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+                    {/* LEFT COLUMN: ACTIVE STEP FORM */}
                     <div className="lg:col-span-7 space-y-8">
-                        {/* Section 1: Customer Contact */}
-                        <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-6 sm:p-8 backdrop-blur-sm">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="w-8 h-8 rounded-full bg-caramel/20 flex items-center justify-center text-caramel text-sm font-bold">
-                                    1
-                                </div>
-                                <h2 className="text-xl font-serif font-bold text-cream">Contact Information</h2>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label className="block text-xs uppercase tracking-wider text-cream/60 font-semibold mb-1.5">First Name *</label>
-                                    <input
-                                        type="text"
-                                        value={formData.firstName}
-                                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                                        placeholder="Jane"
-                                        className={cn(
-                                            "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm text-cream placeholder-white/20 outline-none transition-all",
-                                            errors.firstName ? "border-red-500/80 bg-red-500/5" : "border-white/10 focus:border-caramel"
-                                        )}
-                                    />
-                                    {errors.firstName && <p className="text-red-400 text-[11px] mt-1">{errors.firstName}</p>}
-                                </div>
-                                <div>
-                                    <label className="block text-xs uppercase tracking-wider text-cream/60 font-semibold mb-1.5">Last Name *</label>
-                                    <input
-                                        type="text"
-                                        value={formData.lastName}
-                                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                                        placeholder="Doe"
-                                        className={cn(
-                                            "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm text-cream placeholder-white/20 outline-none transition-all",
-                                            errors.lastName ? "border-red-500/80 bg-red-500/5" : "border-white/10 focus:border-caramel"
-                                        )}
-                                    />
-                                    {errors.lastName && <p className="text-red-400 text-[11px] mt-1">{errors.lastName}</p>}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs uppercase tracking-wider text-cream/60 font-semibold mb-1.5">Email Address * (For Invoice)</label>
-                                    <input
-                                        type="email"
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        placeholder="jane.doe@example.com"
-                                        className={cn(
-                                            "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm text-cream placeholder-white/20 outline-none transition-all",
-                                            errors.email ? "border-red-500/80 bg-red-500/5" : "border-white/10 focus:border-caramel"
-                                        )}
-                                    />
-                                    {errors.email && <p className="text-red-400 text-[11px] mt-1">{errors.email}</p>}
-                                </div>
-                                <div>
-                                    <label className="block text-xs uppercase tracking-wider text-cream/60 font-semibold mb-1.5">Phone (SMS Delivery Updates)</label>
-                                    <input
-                                        type="tel"
-                                        value={formData.phone}
-                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                        placeholder="+1 (555) 000-0000"
-                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 focus:border-caramel rounded-xl text-sm text-cream placeholder-white/20 outline-none transition-all"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Section 2: Shipping & Delivery Method */}
-                        <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-6 sm:p-8 backdrop-blur-sm">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="w-8 h-8 rounded-full bg-caramel/20 flex items-center justify-center text-caramel text-sm font-bold">
-                                    2
-                                </div>
-                                <h2 className="text-xl font-serif font-bold text-cream">Delivery Address & Method</h2>
-                            </div>
-
-                            <div className="space-y-4 mb-6">
-                                <div>
-                                    <label className="block text-xs uppercase tracking-wider text-cream/60 font-semibold mb-1.5">Street Address *</label>
-                                    <input
-                                        type="text"
-                                        value={formData.address}
-                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                        placeholder="123 Artisan Bakery Way"
-                                        className={cn(
-                                            "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm text-cream placeholder-white/20 outline-none transition-all",
-                                            errors.address ? "border-red-500/80 bg-red-500/5" : "border-white/10 focus:border-caramel"
-                                        )}
-                                    />
-                                    {errors.address && <p className="text-red-400 text-[11px] mt-1">{errors.address}</p>}
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div className="sm:col-span-1">
-                                        <label className="block text-xs uppercase tracking-wider text-cream/60 font-semibold mb-1.5">City *</label>
-                                        <input
-                                            type="text"
-                                            value={formData.city}
-                                            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                                            placeholder="San Francisco"
-                                            className={cn(
-                                                "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm text-cream placeholder-white/20 outline-none transition-all",
-                                                errors.city ? "border-red-500/80 bg-red-500/5" : "border-white/10 focus:border-caramel"
-                                            )}
-                                        />
-                                        {errors.city && <p className="text-red-400 text-[11px] mt-1">{errors.city}</p>}
-                                    </div>
-                                    <div className="sm:col-span-1">
-                                        <label className="block text-xs uppercase tracking-wider text-cream/60 font-semibold mb-1.5">State</label>
-                                        <input
-                                            type="text"
-                                            value={formData.state}
-                                            onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                                            placeholder="CA"
-                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 focus:border-caramel rounded-xl text-sm text-cream placeholder-white/20 outline-none transition-all"
-                                        />
-                                    </div>
-                                    <div className="sm:col-span-1">
-                                        <label className="block text-xs uppercase tracking-wider text-cream/60 font-semibold mb-1.5">ZIP Code *</label>
-                                        <input
-                                            type="text"
-                                            value={formData.zip}
-                                            onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
-                                            placeholder="94103"
-                                            className={cn(
-                                                "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm text-cream placeholder-white/20 outline-none transition-all",
-                                                errors.zip ? "border-red-500/80 bg-red-500/5" : "border-white/10 focus:border-caramel"
-                                            )}
-                                        />
-                                        {errors.zip && <p className="text-red-400 text-[11px] mt-1">{errors.zip}</p>}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Delivery Options Selection */}
-                            <label className="block text-xs uppercase tracking-wider text-cream/60 font-semibold mb-3">Choose Delivery Speed</label>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div
-                                    onClick={() => setFormData({ ...formData, deliveryMethod: 'standard' })}
-                                    className={cn(
-                                        "p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between",
-                                        formData.deliveryMethod === 'standard'
-                                            ? "border-caramel bg-caramel/10 shadow-lg shadow-caramel/10"
-                                            : "border-white/10 bg-white/5 hover:border-white/20"
-                                    )}
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <Truck size={18} className="text-caramel" />
-                                            <span className="font-semibold text-sm text-cream">Standard Dispatch</span>
+                        {/* =================================================== */}
+                        {/* STEP 1: CONTACT & DELIVERY ADDRESS */}
+                        {/* =================================================== */}
+                        {currentStep === 1 && (
+                            <motion.div
+                                initial={{ opacity: 0, x: -15 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 15 }}
+                                className="space-y-6"
+                            >
+                                <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-6 sm:p-8 backdrop-blur-sm">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-9 h-9 rounded-full bg-caramel/20 flex items-center justify-center text-caramel font-bold text-sm">
+                                            <User size={18} />
                                         </div>
-                                        <span className="text-xs font-bold text-caramel uppercase">FREE</span>
-                                    </div>
-                                    <p className="text-xs text-white/50">Packaged in insulated gold foil boxes (2-3 days)</p>
-                                </div>
-
-                                <div
-                                    onClick={() => setFormData({ ...formData, deliveryMethod: 'express' })}
-                                    className={cn(
-                                        "p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between",
-                                        formData.deliveryMethod === 'express'
-                                            ? "border-caramel bg-caramel/10 shadow-lg shadow-caramel/10"
-                                            : "border-white/10 bg-white/5 hover:border-white/20"
-                                    )}
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <Sparkles size={18} className="text-caramel" />
-                                            <span className="font-semibold text-sm text-cream">Warm Oven Express</span>
-                                        </div>
-                                        <span className="text-xs font-bold text-caramel">$4.99</span>
-                                    </div>
-                                    <p className="text-xs text-white/50">Same-day courier directly from oven to doorstep</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Section 3: Payment Method */}
-                        <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-6 sm:p-8 backdrop-blur-sm">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="w-8 h-8 rounded-full bg-caramel/20 flex items-center justify-center text-caramel text-sm font-bold">
-                                    3
-                                </div>
-                                <h2 className="text-xl font-serif font-bold text-cream">Payment Method</h2>
-                            </div>
-
-                            {/* Payment Tabs */}
-                            <div className="grid grid-cols-3 gap-2.5 mb-6">
-                                <button
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, paymentMethod: 'card' })}
-                                    className={cn(
-                                        "py-3 px-2 rounded-xl text-xs font-semibold flex flex-col items-center gap-1.5 border transition-all cursor-pointer",
-                                        formData.paymentMethod === 'card'
-                                            ? "border-caramel bg-caramel/15 text-caramel"
-                                            : "border-white/10 bg-white/5 text-cream/60 hover:text-white"
-                                    )}
-                                >
-                                    <CreditCard size={18} />
-                                    <span>Credit / Debit</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, paymentMethod: 'applepay' })}
-                                    className={cn(
-                                        "py-3 px-2 rounded-xl text-xs font-semibold flex flex-col items-center gap-1.5 border transition-all cursor-pointer",
-                                        formData.paymentMethod === 'applepay'
-                                            ? "border-caramel bg-caramel/15 text-caramel"
-                                            : "border-white/10 bg-white/5 text-cream/60 hover:text-white"
-                                    )}
-                                >
-                                    <span className="font-bold text-base leading-none">Pay</span>
-                                    <span>Apple Pay</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, paymentMethod: 'cod' })}
-                                    className={cn(
-                                        "py-3 px-2 rounded-xl text-xs font-semibold flex flex-col items-center gap-1.5 border transition-all cursor-pointer",
-                                        formData.paymentMethod === 'cod'
-                                            ? "border-caramel bg-caramel/15 text-caramel"
-                                            : "border-white/10 bg-white/5 text-cream/60 hover:text-white"
-                                    )}
-                                >
-                                    <HeartHandshake size={18} />
-                                    <span>Cash on Delivery</span>
-                                </button>
-                            </div>
-
-                            {/* Credit Card Fields */}
-                            {formData.paymentMethod === 'card' && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="space-y-4"
-                                >
-                                    <div>
-                                        <label className="block text-xs uppercase tracking-wider text-cream/60 font-semibold mb-1.5">Card Number *</label>
-                                        <input
-                                            type="text"
-                                            value={formData.cardNumber}
-                                            onChange={handleCardNumberChange}
-                                            placeholder="4532 •••• •••• 4242"
-                                            maxLength={19}
-                                            className={cn(
-                                                "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm font-mono text-cream placeholder-white/20 outline-none transition-all",
-                                                errors.cardNumber ? "border-red-500/80 bg-red-500/5" : "border-white/10 focus:border-caramel"
-                                            )}
-                                        />
-                                        {errors.cardNumber && <p className="text-red-400 text-[11px] mt-1">{errors.cardNumber}</p>}
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs uppercase tracking-wider text-cream/60 font-semibold mb-1.5">Expiry Date *</label>
+                                            <h2 className="text-xl font-serif font-bold text-cream">Recipient & Contact</h2>
+                                            <p className="text-xs text-white/50">Where should we deliver confirmation and status alerts?</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-xs uppercase tracking-wider text-cream/70 font-semibold mb-1.5">First Name *</label>
                                             <input
                                                 type="text"
-                                                value={formData.cardExp}
-                                                onChange={handleCardExpChange}
-                                                placeholder="MM/YY"
-                                                maxLength={5}
+                                                value={formData.firstName}
+                                                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                                                 className={cn(
-                                                    "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm font-mono text-cream placeholder-white/20 outline-none transition-all",
-                                                    errors.cardExp ? "border-red-500/80 bg-red-500/5" : "border-white/10 focus:border-caramel"
+                                                    "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm text-cream outline-none transition-all",
+                                                    errors.firstName ? "border-red-500 bg-red-500/10" : "border-white/10 focus:border-caramel focus:bg-white/[0.08]"
                                                 )}
                                             />
-                                            {errors.cardExp && <p className="text-red-400 text-[11px] mt-1">{errors.cardExp}</p>}
+                                            {errors.firstName && <p className="text-red-400 text-[11px] mt-1">{errors.firstName}</p>}
                                         </div>
                                         <div>
-                                            <label className="block text-xs uppercase tracking-wider text-cream/60 font-semibold mb-1.5">CVC / CVV *</label>
+                                            <label className="block text-xs uppercase tracking-wider text-cream/70 font-semibold mb-1.5">Last Name *</label>
                                             <input
-                                                type="password"
-                                                value={formData.cardCvc}
-                                                onChange={(e) => setFormData({ ...formData, cardCvc: e.target.value.substring(0, 4) })}
-                                                placeholder="•••"
-                                                maxLength={4}
+                                                type="text"
+                                                value={formData.lastName}
+                                                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                                                 className={cn(
-                                                    "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm font-mono text-cream placeholder-white/20 outline-none transition-all",
-                                                    errors.cardCvc ? "border-red-500/80 bg-red-500/5" : "border-white/10 focus:border-caramel"
+                                                    "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm text-cream outline-none transition-all",
+                                                    errors.lastName ? "border-red-500 bg-red-500/10" : "border-white/10 focus:border-caramel focus:bg-white/[0.08]"
                                                 )}
                                             />
-                                            {errors.cardCvc && <p className="text-red-400 text-[11px] mt-1">{errors.cardCvc}</p>}
+                                            {errors.lastName && <p className="text-red-400 text-[11px] mt-1">{errors.lastName}</p>}
                                         </div>
                                     </div>
-                                </motion.div>
-                            )}
 
-                            {formData.paymentMethod === 'applepay' && (
-                                <div className="p-5 rounded-2xl bg-white/5 text-center text-xs text-cream/70 border border-white/10">
-                                    Apple Pay biometric verification will appear once you confirm the order.
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs uppercase tracking-wider text-cream/70 font-semibold mb-1.5">Email Address * (For Invoice & Tracking)</label>
+                                            <input
+                                                type="email"
+                                                value={formData.email}
+                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                className={cn(
+                                                    "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm text-cream outline-none transition-all",
+                                                    errors.email ? "border-red-500 bg-red-500/10" : "border-white/10 focus:border-caramel focus:bg-white/[0.08]"
+                                                )}
+                                            />
+                                            {errors.email && <p className="text-red-400 text-[11px] mt-1">{errors.email}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs uppercase tracking-wider text-cream/70 font-semibold mb-1.5">Phone (SMS Delivery Alerts)</label>
+                                            <input
+                                                type="tel"
+                                                value={formData.phone}
+                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                className="w-full px-4 py-3 bg-white/5 border border-white/10 focus:border-caramel focus:bg-white/[0.08] rounded-xl text-sm text-cream outline-none transition-all"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
 
-                            {formData.paymentMethod === 'cod' && (
-                                <div className="p-5 rounded-2xl bg-caramel/10 text-center text-xs text-caramel border border-caramel/20">
-                                    Pay with cash upon receipt. Exact change is appreciated by our couriers.
+                                <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-6 sm:p-8 backdrop-blur-sm">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-9 h-9 rounded-full bg-caramel/20 flex items-center justify-center text-caramel font-bold text-sm">
+                                            <MapPin size={18} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-serif font-bold text-cream">Shipping Destination</h2>
+                                            <p className="text-xs text-white/50">Hand-delivered direct from our ovens to your door</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-xs uppercase tracking-wider text-cream/70 font-semibold mb-1.5">Street Address *</label>
+                                            <input
+                                                type="text"
+                                                value={formData.address}
+                                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                                className={cn(
+                                                    "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm text-cream outline-none transition-all",
+                                                    errors.address ? "border-red-500 bg-red-500/10" : "border-white/10 focus:border-caramel focus:bg-white/[0.08]"
+                                                )}
+                                            />
+                                            {errors.address && <p className="text-red-400 text-[11px] mt-1">{errors.address}</p>}
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs uppercase tracking-wider text-cream/70 font-semibold mb-1.5">Apartment, Suite, Unit (Optional)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.apartment}
+                                                onChange={(e) => setFormData({ ...formData, apartment: e.target.value })}
+                                                className="w-full px-4 py-3 bg-white/5 border border-white/10 focus:border-caramel rounded-xl text-sm text-cream outline-none"
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            <div>
+                                                <label className="block text-xs uppercase tracking-wider text-cream/70 font-semibold mb-1.5">City *</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.city}
+                                                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                                                    className={cn(
+                                                        "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm text-cream outline-none transition-all",
+                                                        errors.city ? "border-red-500 bg-red-500/10" : "border-white/10 focus:border-caramel focus:bg-white/[0.08]"
+                                                    )}
+                                                />
+                                                {errors.city && <p className="text-red-400 text-[11px] mt-1">{errors.city}</p>}
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs uppercase tracking-wider text-cream/70 font-semibold mb-1.5">State</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.state}
+                                                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 focus:border-caramel rounded-xl text-sm text-cream outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs uppercase tracking-wider text-cream/70 font-semibold mb-1.5">ZIP Code *</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.zip}
+                                                    onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
+                                                    className={cn(
+                                                        "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm text-cream outline-none transition-all",
+                                                        errors.zip ? "border-red-500 bg-red-500/10" : "border-white/10 focus:border-caramel focus:bg-white/[0.08]"
+                                                    )}
+                                                />
+                                                {errors.zip && <p className="text-red-400 text-[11px] mt-1">{errors.zip}</p>}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Action to Step 2 */}
+                                    <div className="pt-8 mt-6 border-t border-white/10 flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={handleNextStep}
+                                            className="px-8 py-3.5 rounded-full bg-gradient-to-r from-cookie via-caramel to-[#bf7733] text-chocolate font-bold text-sm flex items-center gap-2 hover:brightness-110 transition-all shadow-lg shadow-caramel/25 cursor-pointer active:scale-95"
+                                        >
+                                            <span>Continue to Delivery & Packaging</span>
+                                            <ChevronRight size={18} />
+                                        </button>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
+                            </motion.div>
+                        )}
 
-                        {/* Gift Note Option */}
-                        <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-6 sm:p-8 backdrop-blur-sm">
-                            <label className="block text-xs uppercase tracking-wider text-caramel font-semibold mb-2 flex items-center gap-1.5">
-                                <Sparkles size={14} /> Handwritten Gift Note (Optional)
-                            </label>
-                            <textarea
-                                value={formData.giftNote}
-                                onChange={(e) => setFormData({ ...formData, giftNote: e.target.value })}
-                                placeholder="E.g., Happy Birthday Sarah! Savor every warm, chocolatey crumb..."
-                                rows={2}
-                                className="w-full px-4 py-3 bg-white/5 border border-white/10 focus:border-caramel rounded-xl text-sm text-cream placeholder-white/20 outline-none transition-all"
-                            />
-                        </div>
+                        {/* =================================================== */}
+                        {/* STEP 2: DELIVERY TIERS, BAKE TIMING & GIFT NOTE */}
+                        {/* =================================================== */}
+                        {currentStep === 2 && (
+                            <motion.div
+                                initial={{ opacity: 0, x: -15 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 15 }}
+                                className="space-y-6"
+                            >
+                                {/* Delivery Speed Selection */}
+                                <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-6 sm:p-8 backdrop-blur-sm">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-9 h-9 rounded-full bg-caramel/20 flex items-center justify-center text-caramel font-bold text-sm">
+                                            <Truck size={18} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-serif font-bold text-cream">Select Delivery Speed</h2>
+                                            <p className="text-xs text-white/50">Each order is protected in gold-embossed thermal insulation</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {/* Standard Heritage Dispatch */}
+                                        <div
+                                            onClick={() => setFormData({ ...formData, deliveryMethod: 'standard' })}
+                                            className={cn(
+                                                "p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4",
+                                                formData.deliveryMethod === 'standard'
+                                                    ? "border-caramel bg-caramel/15 shadow-lg shadow-caramel/10 ring-1 ring-caramel/50"
+                                                    : "border-white/10 bg-white/5 hover:border-white/20"
+                                            )}
+                                        >
+                                            <div className="flex items-start gap-3.5">
+                                                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-caramel shrink-0 mt-0.5">
+                                                    <Truck size={20} />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-serif font-bold text-base text-cream">Standard Heritage Dispatch</span>
+                                                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">Complimentary</span>
+                                                    </div>
+                                                    <p className="text-xs text-white/50 mt-0.5">
+                                                        Insulated gold foil box with sealed freshness locks (1-2 days).
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <span className="font-bold text-caramel text-sm uppercase">FREE</span>
+                                        </div>
+
+                                        {/* Warm Oven Express Courier */}
+                                        <div
+                                            onClick={() => setFormData({ ...formData, deliveryMethod: 'express' })}
+                                            className={cn(
+                                                "p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4",
+                                                formData.deliveryMethod === 'express'
+                                                    ? "border-amber-400 bg-amber-500/15 shadow-lg shadow-amber-500/15 ring-1 ring-amber-400"
+                                                    : "border-white/10 bg-white/5 hover:border-white/20"
+                                            )}
+                                        >
+                                            <div className="flex items-start gap-3.5">
+                                                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-300 shrink-0 mt-0.5">
+                                                    <Flame size={20} className="animate-pulse" />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-serif font-bold text-base text-cream">Warm Oven Express Courier</span>
+                                                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold uppercase tracking-wider">Most Popular</span>
+                                                    </div>
+                                                    <p className="text-xs text-white/50 mt-0.5">
+                                                        Heated thermal pouch hand-off within 45-60 mins of hearth baking.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <span className="font-mono font-bold text-amber-300 text-sm">+$4.99</span>
+                                        </div>
+
+                                        {/* Luxury Concierge & Velvet Box */}
+                                        <div
+                                            onClick={() => setFormData({ ...formData, deliveryMethod: 'luxury_concierge' })}
+                                            className={cn(
+                                                "p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4",
+                                                formData.deliveryMethod === 'luxury_concierge'
+                                                    ? "border-caramel bg-caramel/15 shadow-lg shadow-caramel/10 ring-1 ring-caramel/50"
+                                                    : "border-white/10 bg-white/5 hover:border-white/20"
+                                            )}
+                                        >
+                                            <div className="flex items-start gap-3.5">
+                                                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-caramel shrink-0 mt-0.5">
+                                                    <Gift size={20} />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-serif font-bold text-base text-cream">Grand Velvet Box Concierge</span>
+                                                        <span className="px-2 py-0.5 rounded-full bg-caramel/20 text-caramel text-[10px] font-bold uppercase tracking-wider">Gift Edition</span>
+                                                    </div>
+                                                    <p className="text-xs text-white/50 mt-0.5">
+                                                        Handcrafted rigid gift box, satin ribbon, wax seal & gourmet menu booklet.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <span className="font-mono font-bold text-caramel text-sm">+$7.99</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Fresh Hearth Baking Time Slot */}
+                                <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-6 sm:p-8 backdrop-blur-sm">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-9 h-9 rounded-full bg-caramel/20 flex items-center justify-center text-caramel font-bold text-sm">
+                                            <Clock size={18} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-serif font-bold text-cream">Select Baking Batch</h2>
+                                            <p className="text-xs text-white/50">When would you like our master bakers to load your batch?</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        {[
+                                            { id: 'immediate', title: 'Earliest Hearth Batch', desc: 'Baking right now (Warm in ~40m)' },
+                                            { id: 'afternoon', title: 'Afternoon Tea Batch', desc: '2:30 PM - 4:00 PM Warm Dispatch' },
+                                            { id: 'evening', title: 'Golden Hour Supper', desc: '6:00 PM - 7:30 PM Warm Dispatch' },
+                                        ].map(slot => (
+                                            <div
+                                                key={slot.id}
+                                                onClick={() => setFormData({ ...formData, bakeTimeSlot: slot.id })}
+                                                className={cn(
+                                                    "p-3.5 rounded-2xl border transition-all cursor-pointer text-left",
+                                                    formData.bakeTimeSlot === slot.id
+                                                        ? "border-caramel bg-caramel/15 shadow-md"
+                                                        : "border-white/10 bg-white/5 hover:border-white/20"
+                                                )}
+                                            >
+                                                <span className="font-bold text-sm text-cream block">{slot.title}</span>
+                                                <span className="text-[11px] text-white/50 block mt-1">{slot.desc}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Complimentary Handwritten Gift Parchment */}
+                                <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-6 sm:p-8 backdrop-blur-sm">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-2">
+                                            <Gift size={20} className="text-caramel" />
+                                            <h3 className="font-serif font-bold text-lg text-cream">Complimentary Gift Card</h3>
+                                        </div>
+                                        <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-caramel">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.isGift}
+                                                onChange={(e) => setFormData({ ...formData, isGift: e.target.checked })}
+                                                className="accent-caramel rounded w-4 h-4"
+                                            />
+                                            <span>Include Handwritten Note</span>
+                                        </label>
+                                    </div>
+
+                                    {formData.isGift && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            className="space-y-4 pt-2"
+                                        >
+                                            <textarea
+                                                value={formData.giftNote}
+                                                onChange={(e) => setFormData({ ...formData, giftNote: e.target.value })}
+                                                rows={3}
+                                                maxLength={180}
+                                                className="w-full px-4 py-3 bg-white/5 border border-white/10 focus:border-caramel rounded-xl text-sm text-cream outline-none"
+                                            />
+                                            
+                                            {/* Vintage Parchment Preview */}
+                                            {formData.giftNote && (
+                                                <div className="p-5 rounded-2xl bg-[#f5e7d3] text-[#2b1b17] border border-[#d48c45]/40 shadow-inner relative overflow-hidden">
+                                                    <div className="text-[10px] uppercase tracking-widest text-[#8a5d30] font-mono mb-2 flex items-center justify-between">
+                                                        <span>Calligraphy Parchment Preview</span>
+                                                        <span>Seal: Coral Patisserie</span>
+                                                    </div>
+                                                    <p className="font-serif italic text-base text-[#2b1b17] leading-relaxed">
+                                                        "{formData.giftNote}"
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
+                                </div>
+
+                                {/* Step Navigation Buttons */}
+                                <div className="flex items-center justify-between pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentStep(1)}
+                                        className="inline-flex items-center gap-1.5 px-6 py-3.5 rounded-full border border-white/15 text-cream/70 hover:text-white hover:bg-white/5 text-sm font-semibold transition-all cursor-pointer"
+                                    >
+                                        <ChevronLeft size={16} />
+                                        <span>Back to Address</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleNextStep}
+                                        className="px-8 py-3.5 rounded-full bg-gradient-to-r from-cookie via-caramel to-[#bf7733] text-chocolate font-bold text-sm flex items-center gap-2 hover:brightness-110 transition-all shadow-lg shadow-caramel/25 cursor-pointer active:scale-95"
+                                    >
+                                        <span>Proceed to Payment</span>
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* =================================================== */}
+                        {/* STEP 3: LUXURY PAYMENT & CARDS */}
+                        {/* =================================================== */}
+                        {currentStep === 3 && (
+                            <motion.div
+                                initial={{ opacity: 0, x: -15 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 15 }}
+                                className="space-y-6"
+                            >
+                                <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-6 sm:p-8 backdrop-blur-sm">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-9 h-9 rounded-full bg-caramel/20 flex items-center justify-center text-caramel font-bold text-sm">
+                                            <CreditCard size={18} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-serif font-bold text-cream">Select Payment Method</h2>
+                                            <p className="text-xs text-white/50">All payment tokens are encrypted and handled securely</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Payment Method Selector Tabs */}
+                                    <div className="grid grid-cols-2 gap-3 mb-8">
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, paymentMethod: 'card' })}
+                                            className={cn(
+                                                "py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2.5 border transition-all cursor-pointer",
+                                                formData.paymentMethod === 'card'
+                                                    ? "border-caramel bg-caramel/15 text-caramel ring-1 ring-caramel"
+                                                    : "border-white/10 bg-white/5 text-cream/70 hover:text-white"
+                                            )}
+                                        >
+                                            <CreditCard size={18} />
+                                            <span>Credit / Debit Card</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, paymentMethod: 'cod' })}
+                                            className={cn(
+                                                "py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2.5 border transition-all cursor-pointer",
+                                                formData.paymentMethod === 'cod'
+                                                    ? "border-caramel bg-caramel/15 text-caramel ring-1 ring-caramel"
+                                                    : "border-white/10 bg-white/5 text-cream/70 hover:text-white"
+                                            )}
+                                        >
+                                            <HeartHandshake size={18} />
+                                            <span>Cash on Delivery</span>
+                                        </button>
+                                    </div>
+
+                                    {/* CREDIT CARD INTERACTIVE DISPLAY & FIELDS */}
+                                    {formData.paymentMethod === 'card' && (
+                                        <div className="space-y-6">
+                                            {/* 3D Holographic Card Visualizer */}
+                                            <div className="py-2">
+                                                <LuxuryCardPreview
+                                                    cardNumber={formData.cardNumber}
+                                                    cardExp={formData.cardExp}
+                                                    cardCvc={formData.cardCvc}
+                                                    cardName={formData.cardName || `${formData.firstName} ${formData.lastName}`}
+                                                    isCvcFocused={isCvcFocused}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-4 pt-2">
+                                                <div>
+                                                    <label className="block text-xs uppercase tracking-wider text-cream/70 font-semibold mb-1.5">Name on Card *</label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.cardName}
+                                                        onChange={(e) => setFormData({ ...formData, cardName: e.target.value })}
+                                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 focus:border-caramel rounded-xl text-sm uppercase tracking-wider text-cream outline-none"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-xs uppercase tracking-wider text-cream/70 font-semibold mb-1.5">Card Number *</label>
+                                                    <div className="relative">
+                                                        <input
+                                                            type="text"
+                                                            value={formData.cardNumber}
+                                                            onChange={handleCardNumberChange}
+                                                            maxLength={19}
+                                                            className={cn(
+                                                                "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm font-mono text-cream outline-none transition-all pl-11",
+                                                                errors.cardNumber ? "border-red-500 bg-red-500/10" : "border-white/10 focus:border-caramel"
+                                                            )}
+                                                        />
+                                                        <CreditCard size={18} className="absolute left-3.5 top-3.5 text-white/40" />
+                                                    </div>
+                                                    {errors.cardNumber && <p className="text-red-400 text-[11px] mt-1">{errors.cardNumber}</p>}
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-xs uppercase tracking-wider text-cream/70 font-semibold mb-1.5">Expiry Date *</label>
+                                                        <input
+                                                            type="text"
+                                                            value={formData.cardExp}
+                                                            onChange={handleCardExpChange}
+                                                            maxLength={5}
+                                                            className={cn(
+                                                                "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm font-mono text-cream outline-none transition-all",
+                                                                errors.cardExp ? "border-red-500 bg-red-500/10" : "border-white/10 focus:border-caramel"
+                                                            )}
+                                                        />
+                                                        {errors.cardExp && <p className="text-red-400 text-[11px] mt-1">{errors.cardExp}</p>}
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-xs uppercase tracking-wider text-cream/70 font-semibold mb-1.5">CVC / CVV *</label>
+                                                        <input
+                                                            type="password"
+                                                            value={formData.cardCvc}
+                                                            onFocus={() => setIsCvcFocused(true)}
+                                                            onBlur={() => setIsCvcFocused(false)}
+                                                            onChange={(e) => setFormData({ ...formData, cardCvc: e.target.value.substring(0, 4) })}
+                                                            maxLength={4}
+                                                            className={cn(
+                                                                "w-full px-4 py-3 bg-white/5 border rounded-xl text-sm font-mono text-cream outline-none transition-all",
+                                                                errors.cardCvc ? "border-red-500 bg-red-500/10" : "border-white/10 focus:border-caramel"
+                                                            )}
+                                                        />
+                                                        {errors.cardCvc && <p className="text-red-400 text-[11px] mt-1">{errors.cardCvc}</p>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+
+
+                                    {/* CASH ON DELIVERY DESCRIPTION */}
+                                    {formData.paymentMethod === 'cod' && (
+                                        <div className="p-6 rounded-2xl bg-caramel/10 border border-caramel/25 text-center space-y-2">
+                                            <HeartHandshake size={28} className="mx-auto text-caramel" />
+                                            <h4 className="font-serif font-bold text-cream text-lg">Cash on Hearth Delivery</h4>
+                                            <p className="text-xs text-cream/70 max-w-sm mx-auto">
+                                                Settle in cash directly with our white-glove courier when your warm cookies reach your door.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Step Navigation Buttons */}
+                                <div className="flex items-center justify-between pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentStep(2)}
+                                        className="inline-flex items-center gap-1.5 px-6 py-3.5 rounded-full border border-white/15 text-cream/70 hover:text-white hover:bg-white/5 text-sm font-semibold transition-all cursor-pointer"
+                                    >
+                                        <ChevronLeft size={16} />
+                                        <span>Back to Delivery</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleFinalSubmit}
+                                        disabled={isSubmitting}
+                                        className="px-8 py-3.5 rounded-full bg-gradient-to-r from-cookie via-caramel to-[#bf7733] text-chocolate font-bold text-sm flex items-center gap-2 hover:brightness-110 transition-all shadow-xl shadow-caramel/30 cursor-pointer active:scale-95"
+                                    >
+                                        {isSubmitting ? (
+                                            <>
+                                                <div className="w-4 h-4 border-2 border-chocolate border-t-transparent rounded-full animate-spin" />
+                                                <span>Authorizing Order...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>Complete Order & Bake</span>
+                                                <ChevronRight size={18} />
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
                     </div>
 
-                    {/* RIGHT COLUMN: Sticky Order Summary & Submit CTA */}
+                    {/* RIGHT COLUMN: STICKY ARTISANAL ORDER SUMMARY */}
                     <div className="lg:col-span-5 lg:sticky lg:top-32 space-y-6">
-                        <div className="rounded-3xl bg-gradient-to-b from-[#211411] to-[#180e0c] border border-white/15 p-6 sm:p-8 shadow-2xl backdrop-blur-md">
+                        <div className="rounded-3xl bg-gradient-to-b from-[#241613] via-[#1c110e] to-[#140b08] border border-amber-500/20 p-6 sm:p-8 shadow-2xl backdrop-blur-md relative overflow-hidden">
+                            {/* Ambient shimmer */}
+                            <div className="absolute top-0 right-0 w-48 h-48 bg-caramel/10 rounded-full blur-3xl pointer-events-none" />
+
                             <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
                                 <h3 className="font-serif font-bold text-2xl text-cream">Order Summary</h3>
-                                <span className="text-xs px-2.5 py-1 rounded-full bg-caramel/15 text-caramel font-semibold">
-                                    {cart.length} {cart.length === 1 ? 'flavor' : 'flavors'}
+                                <span className="text-xs px-3 py-1 rounded-full bg-caramel/20 text-caramel font-semibold">
+                                    {cart.length} {cart.length === 1 ? 'Selection' : 'Selections'}
                                 </span>
                             </div>
 
-                            {/* Itemized Cart List */}
-                            <div className="space-y-4 max-h-64 overflow-y-auto pr-1 no-scrollbar mb-6">
+                            {/* Free Luxury Packaging Progress Bar */}
+                            <div className="mb-6 p-3.5 rounded-2xl bg-white/[0.03] border border-white/5">
+                                <div className="flex justify-between items-center text-xs mb-2">
+                                    <span className="text-cream/80 font-medium flex items-center gap-1.5">
+                                        <Sparkles size={13} className="text-amber-300" />
+                                        {remainingForPerk === 0 
+                                            ? 'Complimentary Gold Gift Seal Unlocked!' 
+                                            : `Add $${remainingForPerk.toFixed(2)} for VIP Packaging`}
+                                    </span>
+                                    <span className="text-caramel font-mono font-bold">
+                                        {Math.min(100, Math.round((cartTotal / luxuryPackagingThreshold) * 100))}%
+                                    </span>
+                                </div>
+                                <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-gradient-to-r from-cookie via-caramel to-amber-400 transition-all duration-500"
+                                        style={{ width: `${Math.min(100, (cartTotal / luxuryPackagingThreshold) * 100)}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Cart Items with Inline Quantity Controls */}
+                            <div className="space-y-3.5 max-h-64 overflow-y-auto pr-1 no-scrollbar mb-6">
                                 {cart.map((item) => (
-                                    <div key={item.id} className="flex items-center justify-between gap-3 p-2.5 rounded-2xl bg-white/[0.03] border border-white/5">
+                                    <div key={item.id} className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/10 transition-colors">
                                         <div className="flex items-center gap-3">
                                             <div className="w-12 h-12 rounded-xl bg-chocolate/50 p-1 flex items-center justify-center shrink-0 border border-white/5">
                                                 <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
                                             </div>
                                             <div>
                                                 <h4 className="font-serif font-bold text-cream text-xs line-clamp-1">{item.name}</h4>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="text-[11px] text-white/40">Qty: {item.quantity}</span>
-                                                    <span className="text-white/20">•</span>
-                                                    <span className="text-[11px] text-caramel font-semibold">${item.price.toFixed(2)}</span>
-                                                </div>
+                                                <span className="text-[11px] text-caramel font-semibold block">${item.price.toFixed(2)} each</span>
                                             </div>
                                         </div>
-                                        <span className="font-serif font-bold text-cream text-xs shrink-0">
-                                            ${(item.price * item.quantity).toFixed(2)}
-                                        </span>
+
+                                        {/* Inline Quantity Modifier */}
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-xl border border-white/10">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => updateQuantity(item.id, -1)}
+                                                    className="text-white/60 hover:text-white p-0.5 cursor-pointer"
+                                                >
+                                                    <Minus size={12} />
+                                                </button>
+                                                <span className="font-mono text-xs px-1 text-cream font-bold">{item.quantity}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => updateQuantity(item.id, 1)}
+                                                    className="text-white/60 hover:text-white p-0.5 cursor-pointer"
+                                                >
+                                                    <Plus size={12} />
+                                                </button>
+                                            </div>
+
+                                            <span className="font-serif font-bold text-cream text-xs w-12 text-right">
+                                                ${(item.price * item.quantity).toFixed(2)}
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => removeFromCart(item.id)}
+                                                className="text-white/30 hover:text-red-400 p-1 cursor-pointer transition-colors"
+                                                title="Remove item"
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
 
-                            {/* Promo Code Input */}
+                            {/* Chef Recommendations Pairing Drawer */}
+                            {suggestedCookies.length > 0 && (
+                                <div className="mb-6 pt-4 border-t border-white/10">
+                                    <span className="text-[11px] font-bold text-caramel uppercase tracking-wider block mb-2 flex items-center gap-1">
+                                        <Sparkles size={12} /> Master Baker's Recommended Pairing:
+                                    </span>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {suggestedCookies.map(cookie => (
+                                            <div key={cookie.id} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2 overflow-hidden">
+                                                    <img src={cookie.image} alt={cookie.name} className="w-8 h-8 object-contain shrink-0" />
+                                                    <div className="truncate">
+                                                        <span className="block text-[11px] font-serif font-bold text-cream truncate">{cookie.name}</span>
+                                                        <span className="text-[10px] text-caramel">${cookie.price.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => addToCart(cookie)}
+                                                    className="px-2 py-1 rounded-lg bg-caramel/20 hover:bg-caramel hover:text-chocolate text-caramel text-[10px] font-bold shrink-0 transition-colors cursor-pointer"
+                                                >
+                                                    + Add
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Promo Code Input & Quick Tags */}
                             <div className="pt-4 border-t border-white/10 mb-6">
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 mb-2">
                                     <input
                                         type="text"
                                         value={promoCode}
                                         onChange={(e) => setPromoCode(e.target.value)}
-                                        placeholder="Promo code (e.g. CORAL10)"
+                                        placeholder="Enter promo code"
                                         className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 focus:border-caramel rounded-xl text-xs text-cream uppercase tracking-wider placeholder-white/30 outline-none"
                                     />
                                     <button
                                         type="button"
-                                        onClick={handleApplyPromo}
-                                        className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-caramel hover:text-chocolate text-cream font-bold text-xs transition-all cursor-pointer shrink-0"
+                                        onClick={() => handleApplyPromo()}
+                                        className="px-4 py-2.5 rounded-xl bg-caramel/20 hover:bg-caramel hover:text-chocolate text-caramel font-bold text-xs transition-all cursor-pointer shrink-0"
                                     >
                                         Apply
                                     </button>
                                 </div>
+
                                 {promoError && <p className="text-red-400 text-[11px] mt-1.5">{promoError}</p>}
                                 {promoSuccess && <p className="text-emerald-400 text-[11px] mt-1.5 font-semibold">{promoSuccess}</p>}
                             </div>
 
-                            {/* Calculations list */}
+                            {/* Calculations Breakdown */}
                             <div className="space-y-3 text-xs mb-6">
                                 <div className="flex justify-between text-cream/70">
                                     <span>Bag Subtotal</span>
                                     <span>${cartTotal.toFixed(2)}</span>
                                 </div>
                                 {appliedDiscount > 0 && (
-                                    <div className="flex justify-between text-caramel font-semibold">
+                                    <div className="flex justify-between text-emerald-400 font-semibold">
                                         <span>Promo Discount</span>
                                         <span>-${discountAmount.toFixed(2)}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between text-cream/70">
-                                    <span>Delivery Fee</span>
-                                    <span>{shippingFee === 0 ? 'FREE' : `$${shippingFee.toFixed(2)}`}</span>
+                                    <span>Shipping & Packaging</span>
+                                    <span>{shippingFee === 0 ? 'COMPLIMENTARY' : `$${shippingFee.toFixed(2)}`}</span>
                                 </div>
                                 <div className="flex justify-between text-cream/70">
-                                    <span>Estimated Sales Tax (5%)</span>
+                                    <span>Patisserie Sales Tax (5%)</span>
                                     <span>${taxAmount.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between items-baseline pt-4 border-t border-white/10">
-                                    <span className="font-serif font-bold text-base text-cream">Order Total</span>
+                                    <span className="font-serif font-bold text-base text-cream">Grand Total</span>
                                     <div className="text-right">
-                                        <span className="text-2xl font-serif font-bold text-caramel">
+                                        <span className="text-3xl font-serif font-bold text-caramel drop-shadow">
                                             ${finalTotal.toFixed(2)}
                                         </span>
-                                        <span className="block text-[10px] text-white/40">Includes all taxes & delivery</span>
+                                        <span className="block text-[10px] text-white/40 mt-0.5">Taxes & insured dispatch included</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Place Order CTA Button */}
+                            {/* Big Action Submit CTA Button */}
                             <button
-                                type="submit"
+                                type="button"
+                                onClick={handleFinalSubmit}
                                 disabled={isSubmitting}
                                 className={cn(
-                                    "w-full py-4 sm:py-4.5 rounded-full font-bold text-base flex items-center justify-center gap-2 transition-all shadow-xl active:scale-95 cursor-pointer",
+                                    "w-full py-4 rounded-full font-bold text-base flex items-center justify-center gap-2 transition-all shadow-xl active:scale-95 cursor-pointer",
                                     isSubmitting 
                                         ? "bg-caramel/50 text-chocolate cursor-wait" 
-                                        : "bg-gradient-to-r from-cookie to-caramel text-chocolate hover:shadow-[0_0_25px_rgba(212,140,69,0.4)] hover:brightness-110"
+                                        : "bg-gradient-to-r from-cookie via-caramel to-[#bf7733] text-chocolate hover:shadow-[0_0_30px_rgba(212,140,69,0.5)] hover:brightness-110"
                                 )}
                             >
                                 {isSubmitting ? (
@@ -1064,26 +1792,28 @@ export default function Checkout() {
                                     </>
                                 ) : (
                                     <>
-                                        <span>Place Order & Generate Invoice</span>
+                                        <span>Place Order & Bake Fresh</span>
                                         <ChevronRight size={18} />
                                     </>
                                 )}
                             </button>
 
-                            {/* Trust Guarantee Notes */}
+                            {/* Trust badges */}
                             <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-center gap-4 text-[11px] text-cream/50">
                                 <span className="flex items-center gap-1">
-                                    <ShieldCheck size={14} className="text-caramel" /> 100% Guaranteed Fresh
+                                    <ShieldCheck size={14} className="text-caramel" /> 100% Freshness Guarantee
                                 </span>
                                 <span>•</span>
                                 <span className="flex items-center gap-1">
-                                    <FileText size={14} className="text-caramel" /> PDF Bill Auto-Generated
+                                    <FileText size={14} className="text-caramel" /> Official Tax PDF Bill
                                 </span>
                             </div>
                         </div>
                     </div>
-                </form>
+                </div>
             </div>
+
+
 
             <Footer />
         </div>
