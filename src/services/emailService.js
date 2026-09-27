@@ -39,7 +39,7 @@ export async function sendOrderConfirmationEmail(orderData) {
     if (emailJsServiceId && emailJsTemplateId && emailJsPublicKey) {
         try {
             const itemsSummary = orderData.items
-                .map(item => `${item.quantity}× ${item.name} ($${(item.price * item.quantity).toFixed(2)})`)
+                .map(item => `${item.quantity} pck × ${item.name} (Rs. ${(item.price * item.quantity).toFixed(2)})`)
                 .join('\n');
 
             const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
@@ -55,11 +55,11 @@ export async function sendOrderConfirmationEmail(orderData) {
                         order_id: orderData.orderId,
                         order_date: orderData.date,
                         items_summary: itemsSummary,
-                        subtotal: `$${orderData.subtotal.toFixed(2)}`,
-                        discount: orderData.discount > 0 ? `-$${orderData.discount.toFixed(2)}` : '$0.00',
-                        shipping: orderData.shipping === 0 ? 'COMPLIMENTARY' : `$${orderData.shipping.toFixed(2)}`,
-                        tax: `$${orderData.tax.toFixed(2)}`,
-                        total: `$${orderData.total.toFixed(2)}`,
+                        subtotal: `Rs. ${orderData.subtotal.toFixed(2)}`,
+                        discount: orderData.discount > 0 ? `-Rs. ${orderData.discount.toFixed(2)}` : 'Rs. 0.00',
+                        shipping: orderData.shipping === 0 ? 'COMPLIMENTARY' : `Rs. ${orderData.shipping.toFixed(2)}`,
+                        tax: `Rs. ${orderData.tax.toFixed(2)}`,
+                        total: `Rs. ${orderData.total.toFixed(2)}`,
                         payment_method: orderData.paymentMethod,
                         delivery_address: `${orderData.customer.address}, ${orderData.customer.city}, ${orderData.customer.state} ${orderData.customer.zip}`,
                         delivery_tier: orderData.deliveryMethodLabel || 'Standard Dispatch',
@@ -84,7 +84,7 @@ export async function sendOrderConfirmationEmail(orderData) {
     // 3. Instant Zero-Config Real-Time Dispatch Fallback
     try {
         const itemsSummary = orderData.items
-            .map(item => `${item.quantity}× ${item.name} ($${(item.price * item.quantity).toFixed(2)})`)
+            .map(item => `${item.quantity} pck × ${item.name} (Rs. ${(item.price * item.quantity).toFixed(2)})`)
             .join(', ');
 
         const formDataPayload = {
@@ -99,11 +99,11 @@ export async function sendOrderConfirmationEmail(orderData) {
             "Delivery Speed": orderData.deliveryMethodLabel || 'Standard Dispatch',
             "Payment Settled": orderData.paymentMethod,
             "Cookies Ordered": itemsSummary,
-            "Subtotal": `$${orderData.subtotal.toFixed(2)}`,
-            "Promo Discount": orderData.discount > 0 ? `-$${orderData.discount.toFixed(2)} (${orderData.promoCode})` : 'None',
-            "Shipping Fee": orderData.shipping === 0 ? 'COMPLIMENTARY' : `$${orderData.shipping.toFixed(2)}`,
-            "Estimated Tax": `$${orderData.tax.toFixed(2)}`,
-            "GRAND TOTAL": `$${orderData.total.toFixed(2)}`,
+            "Subtotal": `Rs. ${orderData.subtotal.toFixed(2)}`,
+            "Promo Discount": orderData.discount > 0 ? `-Rs. ${orderData.discount.toFixed(2)} (${orderData.promoCode})` : 'None',
+            "Shipping Fee": orderData.shipping === 0 ? 'COMPLIMENTARY' : `Rs. ${orderData.shipping.toFixed(2)}`,
+            "Estimated Tax": `Rs. ${orderData.tax.toFixed(2)}`,
+            "GRAND TOTAL": `Rs. ${orderData.total.toFixed(2)}`,
             "Personalized Gift Note": orderData.giftNote || 'None enclosed',
             "Artisanal Note": "Every batch is baked fresh at 185°C with 100% single-origin cocoa and grass-fed butter."
         };

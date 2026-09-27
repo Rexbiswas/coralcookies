@@ -1,59 +1,111 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, useMotionValue, useSpring } from "framer-motion";
 
 const CustomCursor = () => {
+    const [mounted, setMounted] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
     const [isHovering, setIsHovering] = useState(false);
-    const cursorX = useMotionValue(-100);
-    const cursorY = useMotionValue(-100);
+    const [isClicking, setIsClicking] = useState(false);
 
-    const springConfig = { damping: 25, stiffness: 400, mass: 0.5 };
-    const springX = useSpring(cursorX, springConfig);
-    const springY = useSpring(cursorY, springConfig);
+    const mouseX = useMotionValue(-100);
+    const mouseY = useMotionValue(-100);
+
+    const springConfig = { damping: 28, stiffness: 450, mass: 0.4 };
+    const springX = useSpring(mouseX, springConfig);
+    const springY = useSpring(mouseY, springConfig);
 
     useEffect(() => {
-        const moveCursor = (e) => {
-            cursorX.set(e.clientX - 10);
-            cursorY.set(e.clientY - 10);
+        setMounted(true);
 
-            // Check if hovering over clickable elements
+        const handleMouseMove = (e) => {
+            mouseX.set(e.clientX);
+            mouseY.set(e.clientY);
+            if (!isVisible) setIsVisible(true);
+
+            // Robust hover detection across standard tags and clickable classes
             const target = e.target;
-            const isClickable = target.closest('a, button, [role="button"], input, .clickable');
-            setIsHovering(!!isClickable);
+            if (target instanceof Element) {
+                const clickable = target.closest(
+                    'a, button, [role="button"], input, select, textarea, label, .cursor-pointer, [data-clickable]'
+                );
+                setIsHovering(!!clickable);
+            }
         };
 
-        window.addEventListener("mousemove", moveCursor);
-        return () => window.removeEventListener("mousemove", moveCursor);
-    }, [cursorX, cursorY]);
+        const handleMouseDown = () => setIsClicking(true);
+        const handleMouseUp = () => setIsClicking(false);
+        const handleMouseLeave = () => setIsVisible(false);
+        const handleMouseEnter = () => setIsVisible(true);
 
-    return (
+        window.addEventListener("mousemove", handleMouseMove, { passive: true });
+        window.addEventListener("mousedown", handleMouseDown);
+        window.addEventListener("mouseup", handleMouseUp);
+        document.documentElement.addEventListener("mouseleave", handleMouseLeave);
+        document.documentElement.addEventListener("mouseenter", handleMouseEnter);
+
+        return () => {
+            window.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mousedown", handleMouseDown);
+            window.removeEventListener("mouseup", handleMouseUp);
+            document.documentElement.removeEventListener("mouseleave", handleMouseLeave);
+            document.documentElement.removeEventListener("mouseenter", handleMouseEnter);
+        };
+    }, [mouseX, mouseY, isVisible]);
+
+    if (!mounted || typeof document === "undefined") return null;
+
+    const cursorContent = (
         <>
             <style>{`
-        @media (min-width: 768px) {
-            body { cursor: none; }
-            a, button, input { cursor: none; }
-        }
-      `}</style>
+                @media (min-width: 768px) {
+                    html, body, a, button, input, select, textarea, [role="button"], .cursor-pointer {
+                        cursor: none !important;
+                    }
+                }
+            `}</style>
 
-            {/* Main Cursor (Dot) */}
+            {/* Main Center Dot */}
             <motion.div
-                className="fixed top-0 left-0 w-5 h-5 bg-caramel rounded-full pointer-events-none z-[9999] mix-blend-exclusion hidden md:block"
-                style={{ x: cursorX, y: cursorY }}
+                className="fixed top-0 left-0 pointer-events-none z-[9999999] hidden md:block rounded-full bg-caramel shadow-[0_0_10px_rgba(212,140,69,0.9),0_0_20px_rgba(212,140,69,0.5)]"
+                style={{
+                    x: mouseX,
+                    y: mouseY,
+                    translateX: "-50%",
+                    translateY: "-50%",
+                }}
+                animate={{
+                    width: isClicking ? 6 : isHovering ? 8 : 7,
+                    height: isClicking ? 6 : isHovering ? 8 : 7,
+                    opacity: isVisible ? 1 : 0,
+                    scale: isClicking ? 0.75 : 1,
+                }}
+                transition={{ duration: 0.15 }}
             />
 
-            {/* Trailing Ring */}
+            {/* Smooth Trailing Aureole Ring */}
             <motion.div
-                className="fixed top-0 left-0 w-10 h-10 border border-white/50 rounded-full pointer-events-none z-[9998] mix-blend-difference hidden md:block"
-                style={{ x: springX, y: springY, translateX: "-25%", translateY: "-25%" }}
-                animate={{
-                    scale: isHovering ? 2.5 : 1,
-                    opacity: isHovering ? 0.8 : 0.3,
-                    backgroundColor: isHovering ? "rgba(212, 140, 69, 0.2)" : "transparent",
-                    borderColor: isHovering ? "rgba(212, 140, 69, 0.5)" : "rgba(255, 255, 255, 0.5)"
+                className="fixed top-0 left-0 pointer-events-none z-[9999998] hidden md:block rounded-full border border-caramel/70 shadow-[0_0_20px_rgba(212,140,69,0.25)]"
+                style={{
+                    x: springX,
+                    y: springY,
+                    translateX: "-50%",
+                    translateY: "-50%",
                 }}
-                transition={{ duration: 0.2 }}
+                animate={{
+                    width: isHovering ? 46 : 32,
+                    height: isHovering ? 46 : 32,
+                    borderColor: isHovering ? "rgba(238, 172, 105, 0.95)" : "rgba(212, 140, 69, 0.55)",
+                    backgroundColor: isHovering ? "rgba(212, 140, 69, 0.14)" : "rgba(212, 140, 69, 0.03)",
+                    scale: isClicking ? 0.85 : 1,
+                    opacity: isVisible ? 1 : 0,
+                }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
             />
         </>
     );
+
+    return createPortal(cursorContent, document.body);
 };
 
 export default CustomCursor;

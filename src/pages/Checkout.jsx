@@ -129,7 +129,7 @@ const generateInvoicePDF = (orderData) => {
         doc.setTextColor(43, 27, 23);
         doc.text('ARTISANAL SELECTION', 22, 99.5);
         doc.text('COLLECTION', 95, 99.5);
-        doc.text('QTY', 135, 99.5, { align: 'center' });
+        doc.text('QTY (PCK)', 135, 99.5, { align: 'center' });
         doc.text('UNIT PRICE', 160, 99.5, { align: 'right' });
         doc.text('AMOUNT', 188, 99.5, { align: 'right' });
 
@@ -148,9 +148,9 @@ const generateInvoicePDF = (orderData) => {
             doc.setTextColor(130, 120, 115);
             doc.text(item.category || 'Hearth Baked', 95, y);
             doc.setTextColor(40, 40, 40);
-            doc.text(String(item.quantity), 135, y, { align: 'center' });
-            doc.text(`$${item.price.toFixed(2)}`, 160, y, { align: 'right' });
-            doc.text(`$${(item.price * item.quantity).toFixed(2)}`, 188, y, { align: 'right' });
+            doc.text(`${item.quantity} pck`, 135, y, { align: 'center' });
+            doc.text(`Rs. ${item.price.toFixed(2)}`, 160, y, { align: 'right' });
+            doc.text(`Rs. ${(item.price * item.quantity).toFixed(2)}`, 188, y, { align: 'right' });
             y += 7.5;
         });
 
@@ -169,18 +169,18 @@ const generateInvoicePDF = (orderData) => {
             y += isBold ? 8 : 5.5;
         };
 
-        printSummaryLine('Subtotal:', `$${orderData.subtotal.toFixed(2)}`);
+        printSummaryLine('Subtotal:', `Rs. ${orderData.subtotal.toFixed(2)}`);
         if (orderData.discount > 0) {
-            printSummaryLine(`Promo Discount (${orderData.promoCode}):`, `-$${orderData.discount.toFixed(2)}`);
+            printSummaryLine(`Promo Discount (${orderData.promoCode}):`, `-Rs. ${orderData.discount.toFixed(2)}`);
         }
-        printSummaryLine('Shipping & Packaging:', orderData.shipping === 0 ? 'COMPLIMENTARY' : `$${orderData.shipping.toFixed(2)}`);
-        printSummaryLine('Patisserie Sales Tax (5%):', `$${orderData.tax.toFixed(2)}`);
+        printSummaryLine('Shipping & Packaging:', orderData.shipping === 0 ? 'COMPLIMENTARY' : `Rs. ${orderData.shipping.toFixed(2)}`);
+        printSummaryLine('Patisserie Sales Tax (5%):', `Rs. ${orderData.tax.toFixed(2)}`);
 
         doc.setDrawColor(212, 140, 69);
         doc.setLineWidth(0.6);
         doc.line(120, y - 1.5, 192, y - 1.5);
         y += 3;
-        printSummaryLine('TOTAL PAID:', `$${orderData.total.toFixed(2)}`, true);
+        printSummaryLine('TOTAL PAID:', `Rs. ${orderData.total.toFixed(2)}`, true);
 
         // Footer Notice & Authenticity Guarantee
         doc.setDrawColor(230, 230, 230);
@@ -354,8 +354,8 @@ export default function Checkout() {
 
     // Delivery fee calculation
     const shippingFee = useMemo(() => {
-        if (formData.deliveryMethod === 'express') return 4.99;
-        if (formData.deliveryMethod === 'luxury_concierge') return 7.99;
+        if (formData.deliveryMethod === 'express') return 149;
+        if (formData.deliveryMethod === 'luxury_concierge') return 249;
         return 0; // Standard is complimentary
     }, [formData.deliveryMethod]);
 
@@ -369,8 +369,8 @@ export default function Checkout() {
     const taxAmount = Math.max(0, (cartTotal - discountAmount) * 0.05);
     const finalTotal = Math.max(0, cartTotal - discountAmount + shippingFee + taxAmount);
 
-    // Free shipping threshold logic ($40 gets free luxury packaging upgrade)
-    const luxuryPackagingThreshold = 40;
+    // Free shipping threshold logic (₹999 gets free luxury packaging upgrade)
+    const luxuryPackagingThreshold = 999;
     const remainingForPerk = Math.max(0, luxuryPackagingThreshold - cartTotal);
 
     // Promo code handler
@@ -791,11 +791,11 @@ export default function Checkout() {
                                         </div>
                                         <div>
                                             <h5 className="font-serif font-bold text-cream text-base">{item.name}</h5>
-                                            <span className="text-xs text-white/40">Qty: {item.quantity} × ${item.price.toFixed(2)}</span>
+                                            <span className="text-xs text-white/40">Qty: {item.quantity} pck × ₹{item.price.toFixed(2)}</span>
                                         </div>
                                     </div>
                                     <span className="font-serif font-bold text-caramel text-base">
-                                        ${(item.price * item.quantity).toFixed(2)}
+                                        ₹{(item.price * item.quantity).toFixed(2)}
                                     </span>
                                 </div>
                             ))}
@@ -816,25 +816,25 @@ export default function Checkout() {
                         <div className="pt-6 space-y-2 text-xs">
                             <div className="flex justify-between text-cream/60">
                                 <span>Subtotal</span>
-                                <span>${completedOrder.subtotal.toFixed(2)}</span>
+                                <span>₹{completedOrder.subtotal.toFixed(2)}</span>
                             </div>
                             {completedOrder.discount > 0 && (
                                 <div className="flex justify-between text-caramel font-semibold">
                                     <span>Discount ({completedOrder.promoCode})</span>
-                                    <span>-${completedOrder.discount.toFixed(2)}</span>
+                                    <span>-₹{completedOrder.discount.toFixed(2)}</span>
                                 </div>
                             )}
                             <div className="flex justify-between text-cream/60">
                                 <span>Shipping & Packaging</span>
-                                <span>{completedOrder.shipping === 0 ? 'COMPLIMENTARY' : `$${completedOrder.shipping.toFixed(2)}`}</span>
+                                <span>{completedOrder.shipping === 0 ? 'COMPLIMENTARY' : `₹${completedOrder.shipping.toFixed(2)}`}</span>
                             </div>
                             <div className="flex justify-between text-cream/60">
                                 <span>Patisserie Tax (5%)</span>
-                                <span>${completedOrder.tax.toFixed(2)}</span>
+                                <span>₹{completedOrder.tax.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between items-center pt-4 border-t border-white/10 text-base">
                                 <span className="font-serif font-bold text-cream">Grand Total Paid</span>
-                                <span className="text-3xl font-serif font-bold text-caramel">${completedOrder.total.toFixed(2)}</span>
+                                <span className="text-3xl font-serif font-bold text-caramel">₹{completedOrder.total.toFixed(2)}</span>
                             </div>
                         </div>
 
@@ -906,13 +906,13 @@ export default function Checkout() {
                                             <p className="font-bold text-caramel uppercase text-xs">Selection Breakdown:</p>
                                             {completedOrder.items.map(item => (
                                                 <div key={item.id} className="flex justify-between text-xs">
-                                                    <span>{item.quantity}× {item.name}</span>
-                                                    <span>${(item.price * item.quantity).toFixed(2)}</span>
+                                                    <span>{item.quantity} pck × {item.name}</span>
+                                                    <span>₹{(item.price * item.quantity).toFixed(2)}</span>
                                                 </div>
                                             ))}
                                             <div className="pt-2 border-t border-white/10 flex justify-between font-bold text-cream">
                                                 <span>Total Settled:</span>
-                                                <span className="text-caramel">${completedOrder.total.toFixed(2)}</span>
+                                                <span className="text-caramel">₹{completedOrder.total.toFixed(2)}</span>
                                             </div>
                                         </div>
 
@@ -1287,7 +1287,7 @@ export default function Checkout() {
                                                     </p>
                                                 </div>
                                             </div>
-                                            <span className="font-mono font-bold text-amber-300 text-sm">+$4.99</span>
+                                            <span className="font-mono font-bold text-amber-300 text-sm">+₹149</span>
                                         </div>
 
                                         {/* Luxury Concierge & Velvet Box */}
@@ -1314,7 +1314,7 @@ export default function Checkout() {
                                                     </p>
                                                 </div>
                                             </div>
-                                            <span className="font-mono font-bold text-caramel text-sm">+$7.99</span>
+                                            <span className="font-mono font-bold text-caramel text-sm">+₹249</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1625,7 +1625,7 @@ export default function Checkout() {
                                         <Sparkles size={13} className="text-amber-300" />
                                         {remainingForPerk === 0 
                                             ? 'Complimentary Gold Gift Seal Unlocked!' 
-                                            : `Add $${remainingForPerk.toFixed(2)} for VIP Packaging`}
+                                            : `Add ₹${remainingForPerk.toFixed(2)} for VIP Packaging`}
                                     </span>
                                     <span className="text-caramel font-mono font-bold">
                                         {Math.min(100, Math.round((cartTotal / luxuryPackagingThreshold) * 100))}%
@@ -1649,7 +1649,7 @@ export default function Checkout() {
                                             </div>
                                             <div>
                                                 <h4 className="font-serif font-bold text-cream text-xs line-clamp-1">{item.name}</h4>
-                                                <span className="text-[11px] text-caramel font-semibold block">${item.price.toFixed(2)} each</span>
+                                                <span className="text-[11px] text-caramel font-semibold block">₹{item.price} / pck</span>
                                             </div>
                                         </div>
 
@@ -1663,7 +1663,7 @@ export default function Checkout() {
                                                 >
                                                     <Minus size={12} />
                                                 </button>
-                                                <span className="font-mono text-xs px-1 text-cream font-bold">{item.quantity}</span>
+                                                <span className="font-mono text-xs px-1 text-cream font-bold">{item.quantity} <span className="text-[10px] text-white/40 font-normal">pck</span></span>
                                                 <button
                                                     type="button"
                                                     onClick={() => updateQuantity(item.id, 1)}
@@ -1673,8 +1673,8 @@ export default function Checkout() {
                                                 </button>
                                             </div>
 
-                                            <span className="font-serif font-bold text-cream text-xs w-12 text-right">
-                                                ${(item.price * item.quantity).toFixed(2)}
+                                            <span className="font-serif font-bold text-cream text-xs w-16 text-right">
+                                                ₹{(item.price * item.quantity).toFixed(2)}
                                             </span>
 
                                             <button
@@ -1703,7 +1703,7 @@ export default function Checkout() {
                                                     <img src={cookie.image} alt={cookie.name} className="w-8 h-8 object-contain shrink-0" />
                                                     <div className="truncate">
                                                         <span className="block text-[11px] font-serif font-bold text-cream truncate">{cookie.name}</span>
-                                                        <span className="text-[10px] text-caramel">${cookie.price.toFixed(2)}</span>
+                                                        <span className="text-[10px] text-caramel">₹{cookie.price} / pck</span>
                                                     </div>
                                                 </div>
                                                 <button
@@ -1746,27 +1746,27 @@ export default function Checkout() {
                             <div className="space-y-3 text-xs mb-6">
                                 <div className="flex justify-between text-cream/70">
                                     <span>Bag Subtotal</span>
-                                    <span>${cartTotal.toFixed(2)}</span>
+                                    <span>₹{cartTotal.toFixed(2)}</span>
                                 </div>
                                 {appliedDiscount > 0 && (
                                     <div className="flex justify-between text-emerald-400 font-semibold">
                                         <span>Promo Discount</span>
-                                        <span>-${discountAmount.toFixed(2)}</span>
+                                        <span>-₹{discountAmount.toFixed(2)}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between text-cream/70">
                                     <span>Shipping & Packaging</span>
-                                    <span>{shippingFee === 0 ? 'COMPLIMENTARY' : `$${shippingFee.toFixed(2)}`}</span>
+                                    <span>{shippingFee === 0 ? 'COMPLIMENTARY' : `₹${shippingFee.toFixed(2)}`}</span>
                                 </div>
                                 <div className="flex justify-between text-cream/70">
                                     <span>Patisserie Sales Tax (5%)</span>
-                                    <span>${taxAmount.toFixed(2)}</span>
+                                    <span>₹{taxAmount.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between items-baseline pt-4 border-t border-white/10">
                                     <span className="font-serif font-bold text-base text-cream">Grand Total</span>
                                     <div className="text-right">
                                         <span className="text-3xl font-serif font-bold text-caramel drop-shadow">
-                                            ${finalTotal.toFixed(2)}
+                                            ₹{finalTotal.toFixed(2)}
                                         </span>
                                         <span className="block text-[10px] text-white/40 mt-0.5">Taxes & insured dispatch included</span>
                                     </div>

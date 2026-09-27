@@ -147,7 +147,7 @@ const PhysicalCookie = ({ cookie, index, shelves, world, onSelect, onAddToCart }
                             <div className="flex flex-col items-center gap-2">
                                 <span className="text-caramel text-[10px] uppercase font-bold tracking-widest leading-tight">{cookie.name}</span>
                                 <div className="flex items-center gap-4">
-                                    <span className="text-cream font-serif font-bold">${cookie.price.toFixed(2)}</span>
+                                    <span className="text-cream font-serif font-bold">₹{cookie.price} <span className="text-[10px] text-white/50 font-sans font-normal">/ pck</span></span>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -510,7 +510,10 @@ const Shop = () => {
                                             <span className="text-caramel uppercase tracking-widest text-[10px] font-extrabold">{cookie.category}</span>
                                             <h3 className="text-3xl font-serif text-cream hover:text-caramel transition-colors">{cookie.name}</h3>
                                         </div>
-                                        <span className="text-2xl font-serif text-caramel">${cookie.price.toFixed(2)}</span>
+                                        <div className="text-right">
+                                            <span className="text-2xl font-serif text-caramel font-bold">₹{cookie.price}</span>
+                                            <span className="block text-[11px] text-white/40 font-mono">/ pck</span>
+                                        </div>
                                     </div>
                                     <p className="text-white/40 font-light text-sm line-clamp-2">{cookie.description}</p>
                                     <div className="flex gap-4 pt-4">
@@ -632,12 +635,15 @@ const Shop = () => {
                                 </p>
 
                                 <div className="flex items-center gap-6 mb-8 pb-6 border-b border-white/5">
-                                    <span className="text-3xl sm:text-4xl md:text-5xl font-serif text-cream font-bold">
-                                        ${selectedCookie.price.toFixed(2)}
-                                    </span>
+                                    <div>
+                                        <span className="text-3xl sm:text-4xl md:text-5xl font-serif text-cream font-bold">
+                                            ₹{selectedCookie.price}
+                                        </span>
+                                        <span className="text-caramel font-mono text-sm ml-2 font-semibold">/ pck</span>
+                                    </div>
                                     <div className="h-9 w-px bg-white/10" />
                                     <span className="text-white/40 text-xs uppercase tracking-widest font-medium leading-relaxed">
-                                        Handmade<br />On Order
+                                        Handcrafted Pack<br />Baked Fresh
                                     </span>
                                 </div>
 

@@ -340,7 +340,7 @@ const Navbar = () => {
                                                                 {cookie.name}
                                                             </h4>
                                                             <span className="text-xs font-serif text-caramel font-semibold">
-                                                                ${cookie.price.toFixed(2)}
+                                                                ₹{cookie.price} / pck
                                                             </span>
                                                         </div>
                                                         <button
@@ -555,7 +555,7 @@ const Navbar = () => {
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-3">
-                                                            <span className="text-caramel font-serif font-bold text-sm">${cookie.price.toFixed(2)}</span>
+                                                            <span className="text-caramel font-serif font-bold text-sm">₹{cookie.price} <span className="text-[10px] text-white/50 font-normal font-sans">/ pck</span></span>
                                                             <button
                                                                 type="button"
                                                                 onClick={(e) => {
@@ -692,10 +692,10 @@ const Navbar = () => {
                                                     <div className="flex justify-between items-center">
                                                         <div className="flex items-center gap-3 bg-black/20 rounded-full px-3 py-1 border border-white/5">
                                                             <button onClick={() => updateQuantity(item.id, -1)} className="text-white/40 hover:text-caramel transition-colors"><Minus size={14} /></button>
-                                                            <span className="text-sm font-bold text-cream min-w-[12px] text-center">{item.quantity}</span>
+                                                            <span className="text-sm font-bold text-cream min-w-[12px] text-center">{item.quantity} <span className="text-[10px] text-white/40 font-normal">pck</span></span>
                                                             <button onClick={() => updateQuantity(item.id, 1)} className="text-white/40 hover:text-caramel transition-colors"><Plus size={14} /></button>
                                                         </div>
-                                                        <span className="text-caramel font-serif font-bold">${(item.price * item.quantity).toFixed(2)}</span>
+                                                        <span className="text-caramel font-serif font-bold">₹{(item.price * item.quantity).toFixed(2)}</span>
                                                     </div>
                                                 </div>
                                             </motion.div>
@@ -707,7 +707,7 @@ const Navbar = () => {
                             <div className="p-8 border-t border-white/5 bg-black/40 backdrop-blur-md">
                                 <div className="flex justify-between items-center mb-6">
                                     <span className="text-cream font-medium opacity-50">Total</span>
-                                    <span className="text-3xl font-serif text-caramel font-bold">${cartTotal.toFixed(2)}</span>
+                                    <span className="text-3xl font-serif text-caramel font-bold">₹{cartTotal.toFixed(2)}</span>
                                 </div>
                                 <button 
                                     disabled={cart.length === 0} 
@@ -818,7 +818,7 @@ const Navbar = () => {
                                                         </button>
                                                     </div>
                                                     <div className="flex justify-between items-center mt-3">
-                                                        <span className="text-caramel font-serif font-bold">${item.price.toFixed(2)}</span>
+                                                        <span className="text-caramel font-serif font-bold">₹{item.price} / pck</span>
                                                         <button
                                                             onClick={() => {
                                                                 addToCart(item);

@@ -232,7 +232,7 @@ export default function ChatbotWidget() {
                           <Star className="w-2.5 h-2.5 fill-caramel text-caramel" />
                           <span>{msg.recommendedCookie.rating}</span>
                           <span className="text-white/30">•</span>
-                          <span className="text-cream font-medium">${msg.recommendedCookie.price.toFixed(2)}</span>
+                          <span className="text-cream font-medium">₹{msg.recommendedCookie.price} / pck</span>
                         </div>
                       </div>
                       <button

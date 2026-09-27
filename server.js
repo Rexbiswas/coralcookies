@@ -122,9 +122,9 @@ function generateOrderHtml(orderData) {
             (item) => `
             <tr style="border-bottom: 1px solid #3d2720;">
                 <td style="padding: 12px 8px; color: #f5e6d3; font-weight: bold; font-family: 'Georgia', serif;">${item.name}</td>
-                <td style="padding: 12px 8px; color: #d48c45; text-align: center; font-family: monospace;">${item.quantity}</td>
-                <td style="padding: 12px 8px; color: #f5e6d3; text-align: right; font-family: monospace;">$${item.price.toFixed(2)}</td>
-                <td style="padding: 12px 8px; color: #d48c45; text-align: right; font-weight: bold; font-family: monospace;">$${(item.price * item.quantity).toFixed(2)}</td>
+                <td style="padding: 12px 8px; color: #d48c45; text-align: center; font-family: monospace;">${item.quantity} pck</td>
+                <td style="padding: 12px 8px; color: #f5e6d3; text-align: right; font-family: monospace;">₹${item.price.toFixed(2)}</td>
+                <td style="padding: 12px 8px; color: #d48c45; text-align: right; font-weight: bold; font-family: monospace;">₹${(item.price * item.quantity).toFixed(2)}</td>
             </tr>
         `
         )
@@ -196,25 +196,25 @@ function generateOrderHtml(orderData) {
                 <div style="background: rgba(0, 0, 0, 0.2); border-radius: 16px; padding: 16px; margin-bottom: 24px;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; color: rgba(245, 230, 211, 0.65);">
                         <span>Subtotal:</span>
-                        <span>$${orderData.subtotal.toFixed(2)}</span>
+                        <span>₹${orderData.subtotal.toFixed(2)}</span>
                     </div>
                     ${orderData.discount > 0 ? `
                     <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; color: #34d399;">
                         <span>Promo Discount (${orderData.promoCode || 'PROMO'}):</span>
-                        <span>-$${orderData.discount.toFixed(2)}</span>
+                        <span>-₹${orderData.discount.toFixed(2)}</span>
                     </div>
                     ` : ''}
                     <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; color: rgba(245, 230, 211, 0.65);">
                         <span>Dispatch Speed (${orderData.deliveryMethodLabel || 'Standard'}):</span>
-                        <span>${orderData.shipping === 0 ? 'COMPLIMENTARY' : `$${orderData.shipping.toFixed(2)}`}</span>
+                        <span>${orderData.shipping === 0 ? 'COMPLIMENTARY' : `₹${orderData.shipping.toFixed(2)}`}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px; color: rgba(245, 230, 211, 0.65);">
                         <span>Patisserie Sales Tax (5%):</span>
-                        <span>$${orderData.tax.toFixed(2)}</span>
+                        <span>₹${orderData.tax.toFixed(2)}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 16px; font-weight: bold; color: #d48c45;">
                         <span style="color: #ffffff; font-family: 'Georgia', serif;">Total Settled:</span>
-                        <span style="font-family: monospace;">$${orderData.total.toFixed(2)}</span>
+                        <span style="font-family: monospace;">₹${orderData.total.toFixed(2)}</span>
                     </div>
                 </div>
 
@@ -270,7 +270,7 @@ app.post('/api/send-order-email', async (req, res) => {
             from: fromAddress,
             to: recipient,
             subject: `Order Confirmed! #${orderData.orderId} - Coral Cookies Haute Patisserie`,
-            text: `Thank you for your order #${orderData.orderId}! Total: $${orderData.total.toFixed(2)}. Your cookies are baking fresh.`,
+            text: `Thank you for your order #${orderData.orderId}! Total: Rs. ${orderData.total.toFixed(2)}. Your cookies are baking fresh.`,
             html: generateOrderHtml(orderData),
         };
 
