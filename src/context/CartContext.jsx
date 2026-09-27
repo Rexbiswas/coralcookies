@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Check } from 'lucide-react';
 
 const CartContext = createContext();
 
@@ -147,17 +148,22 @@ export const CartProvider = ({ children }) => {
             <AnimatePresence>
                 {notification && (
                     <motion.div
-                        initial={{ opacity: 0, y: 50, x: '-50%' }}
-                        animate={{ opacity: 1, y: 0, x: '-50%' }}
-                        exit={{ opacity: 0, y: 20, x: '-50%' }}
-                        className="fixed bottom-10 left-1/2 z-200 bg-caramel text-chocolate px-8 py-4 rounded-full font-bold shadow-2xl flex items-center gap-3"
+                        key="cart-toast"
+                        initial={{ opacity: 0, y: 35, x: '-50%', scale: 0.92 }}
+                        animate={{ opacity: 1, y: 0, x: '-50%', scale: 1 }}
+                        exit={{ opacity: 0, y: 20, x: '-50%', scale: 0.92 }}
+                        transition={{ type: "spring", stiffness: 450, damping: 28 }}
+                        style={{ zIndex: 9999999 }}
+                        className="fixed bottom-8 sm:bottom-10 left-1/2 pointer-events-none select-none max-w-[90vw] sm:max-w-md w-auto"
                     >
-                        <div className="w-6 h-6 rounded-full bg-chocolate/10 flex items-center justify-center">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
+                        <div className="bg-gradient-to-r from-[#df934c] via-[#e6a25e] to-[#df934c] text-[#24130c] px-6 py-3.5 rounded-full font-bold shadow-[0_15px_45px_rgba(0,0,0,0.7)] border border-amber-200/60 flex items-center gap-3 backdrop-none">
+                            <div className="w-6 h-6 rounded-full bg-[#24130c]/15 flex items-center justify-center text-[#24130c] shrink-0 border border-[#24130c]/20">
+                                <Check size={14} strokeWidth={3} />
+                            </div>
+                            <span className="text-xs sm:text-sm font-bold tracking-wide whitespace-nowrap overflow-hidden text-ellipsis drop-shadow-xs">
+                                {notification}
+                            </span>
                         </div>
-                        {notification}
                     </motion.div>
                 )}
             </AnimatePresence>
