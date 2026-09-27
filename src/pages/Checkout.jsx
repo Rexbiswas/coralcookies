@@ -633,10 +633,10 @@ export default function Checkout() {
                             Magnifique, {completedOrder.customer.name.split(' ')[0]}!
                         </h1>
                         <p className="text-cream/70 text-sm sm:text-base max-w-xl mx-auto mb-6 leading-relaxed">
-                            Your small-batch cookies have entered our hearth ovens. An official tax invoice and confirmation package have been dispatched to:
+                            Your small-batch cookies have entered our hearth ovens. An official tax invoice and confirmation package have been dispatched to <strong className="text-caramel">{completedOrder.customer.email}</strong>.
                         </p>
 
-                        {/* Real-Time Email Dispatch Status Live Card */}
+                        {/* Real-Time Email Dispatch Status Live Card (Commented Out)
                         <div className="my-6 max-w-lg mx-auto">
                             {emailSendStatus.sending ? (
                                 <motion.div 
@@ -685,6 +685,7 @@ export default function Checkout() {
                                 </div>
                             )}
                         </div>
+                        */}
 
                         {/* Interactive CTAs */}
                         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
